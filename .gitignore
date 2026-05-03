@@ -1,0 +1,6 @@
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+.idea/
+.DS_Store

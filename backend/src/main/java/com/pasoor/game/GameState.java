@@ -1,0 +1,92 @@
+package com.pasoor.game;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class GameState {
+    private List<Card> deck = new ArrayList<>();
+    private List<Card> myHand = new ArrayList<>();
+    private List<Card> opponentHand = new ArrayList<>();
+    private List<Card> tableCards = new ArrayList<>();
+    private List<Card> myCollectedPile = new ArrayList<>();
+    private List<Card> opponentCollectedPile = new ArrayList<>();
+    private Player currentTurn = Player.ME;
+    private GamePhase phase = GamePhase.NEW;
+    private boolean initialDealDone;
+
+    public int getDeckCount() {
+        return deck.size();
+    }
+
+    public List<Card> getDeck() {
+        return deck;
+    }
+
+    public void setDeck(List<Card> deck) {
+        this.deck = deck;
+    }
+
+    public List<Card> getMyHand() {
+        return myHand;
+    }
+
+    public void setMyHand(List<Card> myHand) {
+        this.myHand = myHand;
+    }
+
+    public List<Card> getOpponentHand() {
+        return opponentHand;
+    }
+
+    public void setOpponentHand(List<Card> opponentHand) {
+        this.opponentHand = opponentHand;
+    }
+
+    public List<Card> getTableCards() {
+        return tableCards;
+    }
+
+    public void setTableCards(List<Card> tableCards) {
+        this.tableCards = tableCards;
+    }
+
+    public List<Card> getMyCollectedPile() {
+        return myCollectedPile;
+    }
+
+    public void setMyCollectedPile(List<Card> myCollectedPile) {
+        this.myCollectedPile = myCollectedPile;
+    }
+
+    public List<Card> getOpponentCollectedPile() {
+        return opponentCollectedPile;
+    }
+
+    public void setOpponentCollectedPile(List<Card> opponentCollectedPile) {
+        this.opponentCollectedPile = opponentCollectedPile;
+    }
+
+    public Player getCurrentTurn() {
+        return currentTurn;
+    }
+
+    public void setCurrentTurn(Player currentTurn) {
+        this.currentTurn = currentTurn;
+    }
+
+    public GamePhase getPhase() {
+        return phase;
+    }
+
+    public void setPhase(GamePhase phase) {
+        this.phase = phase;
+    }
+
+    public boolean isInitialDealDone() {
+        return initialDealDone;
+    }
+
+    public void setInitialDealDone(boolean initialDealDone) {
+        this.initialDealDone = initialDealDone;
+    }
+}
