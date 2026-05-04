@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { acceptFriendRequest, getFriends, rejectFriendRequest, sendFriendRequest } from '../api/friendsApi';
 import { ApiError } from '../api/http';
+import { createMatch, inviteFriendToMatch } from '../api/matchesApi';
 import type { FriendRequestSummary, FriendSummary, FriendsResponse } from '../types/friend';
 
 const emptyFriends: FriendsResponse = {
@@ -12,6 +13,7 @@ const emptyFriends: FriendsResponse = {
 };
 
 export default function FriendsPage() {
+  const navigate = useNavigate();
   const [friends, setFriends] = useState<FriendsResponse>(emptyFriends);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -66,6 +68,20 @@ export default function FriendsPage() {
     }
   }
 
+  async function handleInviteFriend(friend: FriendSummary) {
+    setStatus('saving');
+    setError(null);
+
+    try {
+      const match = await createMatch();
+      const invite = await inviteFriendToMatch(match.id, friend.email);
+      navigate(`/game/${invite.match.id}`, { state: { inviteLink: invite.inviteLink } });
+    } catch (caught) {
+      setError(getFriendlyError(caught, 'Friend could not be invited.'));
+      setStatus('idle');
+    }
+  }
+
   if (status === 'loading') {
     return <main className="loading">Loading friends...</main>;
   }
@@ -103,7 +119,16 @@ export default function FriendsPage() {
           </button>
         </form>
 
-        <FriendList title="Friends" friends={friends.friends} emptyLabel="No friends yet" />
+        <FriendList
+          title="Friends"
+          friends={friends.friends}
+          emptyLabel="No friends yet"
+          actions={(friend) => (
+            <button type="button" onClick={() => handleInviteFriend(friend)} disabled={status === 'saving'}>
+              Invite to game
+            </button>
+          )}
+        />
         <RequestList
           title="Incoming requests"
           requests={friends.incomingRequests}
@@ -151,7 +176,17 @@ function getFriendlyError(caught: unknown, fallback: string): string {
   return caught instanceof Error ? caught.message : fallback;
 }
 
-function FriendList({ title, friends, emptyLabel }: { title: string; friends: FriendSummary[]; emptyLabel: string }) {
+function FriendList({
+  title,
+  friends,
+  emptyLabel,
+  actions
+}: {
+  title: string;
+  friends: FriendSummary[];
+  emptyLabel: string;
+  actions?: (friend: FriendSummary) => ReactNode;
+}) {
   return (
     <section className="friends-section">
       <h2>{title}</h2>
@@ -161,8 +196,11 @@ function FriendList({ title, friends, emptyLabel }: { title: string; friends: Fr
         <ul className="friend-list">
           {friends.map((friend) => (
             <li key={friend.id}>
-              <strong>{friend.name}</strong>
-              <span>{friend.email}</span>
+              <div>
+                <strong>{friend.name}</strong>
+                <span>{friend.email}</span>
+              </div>
+              {actions && <div className="request-actions">{actions(friend)}</div>}
             </li>
           ))}
         </ul>

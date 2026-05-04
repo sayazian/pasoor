@@ -83,6 +83,11 @@ const dealtMatchState: MatchState = {
   }
 };
 
+const waitingMatchState: MatchState = {
+  ...newMatchState,
+  status: 'WAITING'
+};
+
 const emptyFriends = {
   friends: [],
   incomingRequests: [],
@@ -102,6 +107,17 @@ const incomingRequest = {
   recipient: currentUser,
   status: 'PENDING',
   message: 'Want to play Pasoor?'
+};
+
+const pendingInvite = {
+  id: '58f4dfeb-e064-454e-aa9b-7517ad8e120f',
+  status: 'PENDING',
+  sender: currentUser,
+  recipient: friend,
+  recipientEmail: 'friend@example.com',
+  token: 'invite-token',
+  inviteLink: 'http://localhost:5173/invite/invite-token',
+  match: waitingMatchState
 };
 
 describe('App routing', () => {
@@ -288,6 +304,52 @@ describe('App routing', () => {
     expect(screen.queryByText('Loading Pasoor...')).not.toBeInTheDocument();
   });
 
+  it('loads an invite route and accepts the game invite', async () => {
+    window.history.pushState({}, '', '/invite/invite-token');
+    const acceptedInvite = {
+      ...pendingInvite,
+      status: 'ACCEPTED',
+      match: {
+        ...newMatchState,
+        playerTwo: friend
+      }
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(friend);
+      }
+      if (url.endsWith('/api/invites/invite-token') && !init?.method) {
+        return Response.json(pendingInvite);
+      }
+      if (url.endsWith('/api/invites/invite-token/accept') && init?.method === 'POST') {
+        return Response.json(acceptedInvite);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
+        return Response.json(acceptedInvite.match);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /sahar invited you/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /accept invite/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/invites/invite-token/accept', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+    expect(await screen.findByText('My turn')).toBeInTheDocument();
+  });
+
   it('loads the profile route directly and saves edited profile fields', async () => {
     window.history.pushState({}, '', '/profile');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
@@ -357,6 +419,53 @@ describe('App routing', () => {
     expect(screen.getAllByText('friend@example.com')).toHaveLength(2);
     expect(screen.getByText('Want to play Pasoor?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send friend request/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /invite to game/i })).toBeInTheDocument();
+  });
+
+  it('invites an accepted friend to a waiting match', async () => {
+    window.history.pushState({}, '', '/friends');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/friends') && !init?.method) {
+        return Response.json({
+          friends: [friend],
+          incomingRequests: [],
+          outgoingRequests: []
+        });
+      }
+      if (url.endsWith('/api/matches') && init?.method === 'POST') {
+        return Response.json(newMatchState);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}/invite`) && init?.method === 'POST') {
+        return Response.json(pendingInvite);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`) && !init?.method) {
+        return Response.json(waitingMatchState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /invite to game/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(`http://localhost:8080/api/matches/${newMatchState.id}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ email: 'friend@example.com' }),
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+    expect(await screen.findByRole('heading', { name: /waiting for friend/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/invite link/i)).toHaveValue('http://localhost:5173/invite/invite-token');
   });
 
   it('sends a friend request and shows it as outgoing', async () => {

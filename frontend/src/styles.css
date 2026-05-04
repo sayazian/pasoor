@@ -164,7 +164,8 @@ a {
 .auth-panel,
 .dashboard-panel,
 .profile-panel,
-.friends-panel {
+.friends-panel,
+.invite-panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -189,7 +190,8 @@ a {
 }
 
 .profile-shell,
-.friends-shell {
+.friends-shell,
+.invite-shell {
   display: grid;
   place-items: center;
 }
@@ -556,6 +558,17 @@ h2 {
   justify-self: start;
   min-height: 42px;
   padding: 0 18px;
+}
+
+.waiting-panel input {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  font: inherit;
+  min-height: 44px;
+  padding: 0 12px;
+  width: 100%;
 }
 
 .board {

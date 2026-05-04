@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pasoor.friend.Friendship;
 import com.pasoor.friend.FriendshipRepository;
+import com.pasoor.invite.GameInviteRepository;
 import com.pasoor.match.GameRoundRepository;
 import com.pasoor.match.MatchRepository;
 import com.pasoor.user.User;
@@ -43,6 +44,9 @@ class SecurityIntegrationTest {
     private FriendshipRepository friendshipRepository;
 
     @Autowired
+    private GameInviteRepository inviteRepository;
+
+    @Autowired
     private MatchRepository matchRepository;
 
     @Autowired
@@ -50,6 +54,8 @@ class SecurityIntegrationTest {
 
     @BeforeEach
     void clearUsers() {
+        inviteRepository.deleteAllInBatch();
+        inviteRepository.flush();
         roundRepository.deleteAllInBatch();
         roundRepository.flush();
         matchRepository.deleteAllInBatch();
@@ -170,6 +176,95 @@ class SecurityIntegrationTest {
                         .with(oauthUser("player-google", "Player", "player@example.com")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ABANDONED"));
+    }
+
+    @Test
+    void inviteAcceptedFriendCreatesWaitingMatchInvite() throws Exception {
+        User sender = userRepository.saveAndFlush(new User("sender-google", "Sender", "sender@example.com", null));
+        User recipient = userRepository.saveAndFlush(new User("recipient-google", "Recipient", "recipient@example.com", null));
+        Friendship friendship = friendshipRepository.saveAndFlush(new Friendship(sender, recipient, "Want to play?"));
+        mockMvc.perform(post("/api/friends/requests/{id}/accept", friendship.getId())
+                        .with(oauthUser("recipient-google", "Recipient", "recipient@example.com")))
+                .andExpect(status().isOk());
+        String createResponse = mockMvc.perform(post("/api/matches")
+                        .with(oauthUser("sender-google", "Sender", "sender@example.com")))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String matchId = objectMapper.readTree(createResponse).get("id").asText();
+
+        mockMvc.perform(post("/api/matches/{matchId}/invite", matchId)
+                        .with(oauthUser("sender-google", "Sender", "sender@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"recipient@example.com"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.recipient.email").value("recipient@example.com"))
+                .andExpect(jsonPath("$.inviteLink").value(org.hamcrest.Matchers.containsString("/invite/")))
+                .andExpect(jsonPath("$.match.status").value("WAITING"));
+    }
+
+    @Test
+    void inviteRequiresAcceptedFriend() throws Exception {
+        userRepository.saveAndFlush(new User("recipient-google", "Recipient", "recipient@example.com", null));
+        String createResponse = mockMvc.perform(post("/api/matches")
+                        .with(oauthUser("sender-google", "Sender", "sender@example.com")))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String matchId = objectMapper.readTree(createResponse).get("id").asText();
+
+        mockMvc.perform(post("/api/matches/{matchId}/invite", matchId)
+                        .with(oauthUser("sender-google", "Sender", "sender@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"recipient@example.com"}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void invitedFriendAcceptsInviteAndActivatesMatch() throws Exception {
+        User sender = userRepository.saveAndFlush(new User("sender-google", "Sender", "sender@example.com", null));
+        User recipient = userRepository.saveAndFlush(new User("recipient-google", "Recipient", "recipient@example.com", null));
+        Friendship friendship = friendshipRepository.saveAndFlush(new Friendship(sender, recipient, "Want to play?"));
+        mockMvc.perform(post("/api/friends/requests/{id}/accept", friendship.getId())
+                        .with(oauthUser("recipient-google", "Recipient", "recipient@example.com")))
+                .andExpect(status().isOk());
+        String createResponse = mockMvc.perform(post("/api/matches")
+                        .with(oauthUser("sender-google", "Sender", "sender@example.com")))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String matchId = objectMapper.readTree(createResponse).get("id").asText();
+        String inviteResponse = mockMvc.perform(post("/api/matches/{matchId}/invite", matchId)
+                        .with(oauthUser("sender-google", "Sender", "sender@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"recipient@example.com"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String token = objectMapper.readTree(inviteResponse).get("token").asText();
+
+        mockMvc.perform(get("/api/invites/{token}", token)
+                        .with(oauthUser("recipient-google", "Recipient", "recipient@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.match.status").value("WAITING"));
+
+        mockMvc.perform(post("/api/invites/{token}/accept", token)
+                        .with(oauthUser("recipient-google", "Recipient", "recipient@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.match.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.match.playerTwo.email").value("recipient@example.com"));
     }
 
     @Test

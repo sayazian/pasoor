@@ -55,6 +55,18 @@ POST /api/matches/{matchId}/rounds/{roundId}/capture
 
 Each completed round updates match totals. If the 72-point winner rules do not produce a winner, the backend automatically creates the next round.
 
+### Game Invites
+
+Phase 6 lets a user invite an accepted friend to a match. The backend logs the invite link instead of sending real email for now.
+
+```text
+POST /api/matches/{matchId}/invite
+GET /api/invites/{token}
+POST /api/invites/{token}/accept
+```
+
+Invites are only allowed for accepted friends. Creating an invite moves the match to `WAITING`; accepting the invite sets `playerTwo` and returns the match to `ACTIVE`.
+
 ### Commands
 
 ```bash

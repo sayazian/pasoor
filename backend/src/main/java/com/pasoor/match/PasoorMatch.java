@@ -86,6 +86,10 @@ public class PasoorMatch {
         return playerTwo;
     }
 
+    public void setPlayerTwo(User playerTwo) {
+        this.playerTwo = playerTwo;
+    }
+
     public MatchStatus getStatus() {
         return status;
     }

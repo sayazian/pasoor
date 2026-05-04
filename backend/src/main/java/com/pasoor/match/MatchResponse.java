@@ -15,7 +15,7 @@ public record MatchResponse(
         FriendSummary winner,
         RoundResponse currentRound
 ) {
-    static MatchResponse from(PasoorMatch match, RoundResponse currentRound) {
+    public static MatchResponse from(PasoorMatch match, RoundResponse currentRound) {
         return new MatchResponse(
                 match.getId(),
                 match.getStatus(),

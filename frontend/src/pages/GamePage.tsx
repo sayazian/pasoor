@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { captureMatchCards, createMatch, dealMatchRound, exitMatch, getMatch, playMatchCard } from '../api/matchesApi';
 import GameBoard from '../components/GameBoard';
 import type { Player } from '../types/game';
@@ -8,6 +8,10 @@ import type { MatchState } from '../types/match';
 export default function GamePage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const inviteLink = typeof location.state === 'object' && location.state !== null && 'inviteLink' in location.state
+    ? String(location.state.inviteLink)
+    : null;
   const [match, setMatch] = useState<MatchState | null>(null);
   const [selectedTableCards, setSelectedTableCards] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +131,23 @@ export default function GamePage() {
 
   if (!match) {
     return <main className="loading">Loading Pasoor...</main>;
+  }
+
+  if (match.status === 'WAITING') {
+    return (
+      <main className="app-shell">
+        <section className="game-load-error waiting-panel">
+          <p className="eyebrow">Pasoor</p>
+          <h1>Waiting for friend</h1>
+          <p className="muted-text">Share this invite link with your friend. The match starts when they accept.</p>
+          {inviteLink && <input aria-label="Invite link" readOnly value={inviteLink} />}
+          <button type="button" onClick={() => run(() => getMatch(match.id))}>
+            Check again
+          </button>
+          <Link to="/friends">Friends</Link>
+        </section>
+      </main>
+    );
   }
 
   return (

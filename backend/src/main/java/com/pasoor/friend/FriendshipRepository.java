@@ -21,6 +21,16 @@ public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
     List<Friendship> findBetweenUsers(UUID firstUserId, UUID secondUserId);
 
     @Query("""
+            select count(friendship) > 0 from Friendship friendship
+            where friendship.status = com.pasoor.friend.FriendshipStatus.ACCEPTED
+            and (
+                friendship.requester.id = :firstUserId and friendship.recipient.id = :secondUserId
+                or friendship.requester.id = :secondUserId and friendship.recipient.id = :firstUserId
+            )
+            """)
+    boolean existsAcceptedBetweenUsers(UUID firstUserId, UUID secondUserId);
+
+    @Query("""
             select friendship from Friendship friendship
             where friendship.id = :id
             and friendship.recipient.id = :recipientId

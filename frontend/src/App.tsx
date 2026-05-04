@@ -4,6 +4,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react
 import { getCurrentUser, googleLoginUrl, logout, updateProfile } from './api/authApi';
 import FriendsPage from './pages/FriendsPage';
 import GamePage from './pages/GamePage';
+import InvitePage from './pages/InvitePage';
 import type { CurrentUser, PreferredTheme } from './types/auth';
 
 type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
@@ -78,6 +79,14 @@ export default function App() {
             element={
               <ProtectedRoute authStatus={authStatus}>
                 <GamePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invite/:token"
+            element={
+              <ProtectedRoute authStatus={authStatus}>
+                <InvitePage />
               </ProtectedRoute>
             }
           />

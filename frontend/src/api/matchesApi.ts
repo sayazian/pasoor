@@ -1,4 +1,5 @@
 import type { Player } from '../types/game';
+import type { GameInvite } from '../types/invite';
 import type { MatchState } from '../types/match';
 import { request } from './http';
 
@@ -12,6 +13,21 @@ export function getMatch(matchId: string): Promise<MatchState> {
 
 export function exitMatch(matchId: string): Promise<MatchState> {
   return request<MatchState>(`/api/matches/${matchId}/exit`, { method: 'POST' });
+}
+
+export function inviteFriendToMatch(matchId: string, email: string): Promise<GameInvite> {
+  return request<GameInvite>(`/api/matches/${matchId}/invite`, {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+}
+
+export function getInvite(token: string): Promise<GameInvite> {
+  return request<GameInvite>(`/api/invites/${token}`);
+}
+
+export function acceptInvite(token: string): Promise<GameInvite> {
+  return request<GameInvite>(`/api/invites/${token}/accept`, { method: 'POST' });
 }
 
 export function dealMatchRound(matchId: string, roundId: string): Promise<MatchState> {

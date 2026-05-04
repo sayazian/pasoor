@@ -161,6 +161,10 @@ public class MatchService {
         return MatchResponse.from(match, RoundResponse.from(round, readGameState(round)));
     }
 
+    public MatchResponse responseFor(PasoorMatch match) {
+        return response(match, currentRound(match));
+    }
+
     private GameState readGameState(GameRound round) {
         try {
             return objectMapper.readValue(round.getGameStateJson(), GameState.class);
