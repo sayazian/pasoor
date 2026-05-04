@@ -83,8 +83,16 @@ public class User {
         return email;
     }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public String getAvatarUrl() {
         return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public PreferredTheme getPreferredTheme() {
@@ -103,4 +111,3 @@ public class User {
         return updatedAt;
     }
 }
-
