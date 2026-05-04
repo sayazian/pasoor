@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,12 +30,23 @@ class SecurityIntegrationTest {
 
     @BeforeEach
     void clearUsers() {
-        userRepository.deleteAll();
+        userRepository.deleteAllInBatch();
+        userRepository.flush();
     }
 
     @Test
     void meRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void profileUpdateRequiresAuthentication() throws Exception {
+        mockMvc.perform(patch("/api/me/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Sahar","preferredTheme":"MODERN_LIGHT_TABLE"}
+                                """))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -67,5 +79,45 @@ class SecurityIntegrationTest {
     void logoutEndpointReturnsNoContent() throws Exception {
         mockMvc.perform(post("/api/logout").with(oauth2Login()))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void profileUpdatePersistsNameAndThemeButKeepsEmailFromOAuth() throws Exception {
+        mockMvc.perform(patch("/api/me/profile")
+                        .with(oauth2Login().attributes(attributes -> {
+                            attributes.put("sub", "google-789");
+                            attributes.put("name", "Google Name");
+                            attributes.put("email", "sahar@example.com");
+                            attributes.put("picture", "https://example.com/avatar.png");
+                        }))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Card Player","preferredTheme":"DARK_CARD_ROOM"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Card Player"))
+                .andExpect(jsonPath("$.email").value("sahar@example.com"))
+                .andExpect(jsonPath("$.preferredTheme").value("DARK_CARD_ROOM"));
+
+        assertThat(userRepository.findByGoogleSubject("google-789"))
+                .hasValueSatisfying(user -> {
+                    assertThat(user.getName()).isEqualTo("Card Player");
+                    assertThat(user.getEmail()).isEqualTo("sahar@example.com");
+                });
+    }
+
+    @Test
+    void profileUpdateRejectsBlankName() throws Exception {
+        mockMvc.perform(patch("/api/me/profile")
+                        .with(oauth2Login().attributes(attributes -> {
+                            attributes.put("sub", "google-999");
+                            attributes.put("name", "Google Name");
+                            attributes.put("email", "google@example.com");
+                        }))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"   ","preferredTheme":"CLASSIC_GREEN_FELT"}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 }

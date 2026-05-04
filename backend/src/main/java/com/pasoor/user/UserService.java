@@ -3,6 +3,9 @@ package com.pasoor.user;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Service
 public class UserService {
@@ -22,10 +25,23 @@ public class UserService {
         User user = userRepository.findByGoogleSubject(profile.googleSubject())
                 .orElseGet(() -> new User(profile.googleSubject(), profile.name(), profile.email(), profile.avatarUrl()));
 
-        user.setName(profile.name());
         user.setEmail(profile.email());
         user.setAvatarUrl(profile.avatarUrl());
 
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User updateProfile(User user, ProfileUpdateRequest request) {
+        if (request.name() == null || request.name().isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Name is required.");
+        }
+        if (request.preferredTheme() == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "Preferred theme is required.");
+        }
+
+        user.setName(request.name().trim());
+        user.setPreferredTheme(request.preferredTheme());
         return userRepository.save(user);
     }
 
@@ -53,4 +69,3 @@ public class UserService {
         return value instanceof String stringValue ? stringValue : null;
     }
 }
-

@@ -1,8 +1,71 @@
 :root {
-  color: #17211b;
-  background: #eef3ef;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.theme-root {
+  --color-text: #17211b;
+  --color-page: #eef3ef;
+  --color-surface: #f8fbf8;
+  --color-border: #d5dfd8;
+  --color-muted: #66746b;
+  --color-primary: #173f35;
+  --color-secondary: #425f7b;
+  --color-accent: #d9a21b;
+  --color-card: #fffdf7;
+  --color-card-border: #bac6bd;
+  --color-card-back: #245748;
+  --color-card-back-border: #173f35;
+  --shadow-card: 0 8px 18px rgba(34, 44, 38, 0.08);
+  background: var(--color-page);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+.theme-modern-light-table {
+  --color-text: #17202a;
+  --color-page: #f4f7f8;
+  --color-surface: #ffffff;
+  --color-border: #d7e0e5;
+  --color-muted: #65727c;
+  --color-primary: #1f5d76;
+  --color-secondary: #566b7a;
+  --color-accent: #f2b84b;
+  --color-card: #fffefa;
+  --color-card-border: #c8d4dc;
+  --color-card-back: #2c6f87;
+  --color-card-back-border: #1f5d76;
+}
+
+.theme-persian-tile {
+  --color-text: #14242a;
+  --color-page: #edf5f4;
+  --color-surface: #fbfffd;
+  --color-border: #b7d7d3;
+  --color-muted: #5d7774;
+  --color-primary: #075f66;
+  --color-secondary: #4f667d;
+  --color-accent: #c48b2c;
+  --color-card: #fffaf0;
+  --color-card-border: #9dc6c0;
+  --color-card-back: #086b73;
+  --color-card-back-border: #064d52;
+}
+
+.theme-dark-card-room {
+  --color-text: #f2efe6;
+  --color-page: #171b1d;
+  --color-surface: #22282b;
+  --color-border: #3a4547;
+  --color-muted: #aeb9b5;
+  --color-primary: #c99a3e;
+  --color-secondary: #6f8390;
+  --color-accent: #e0b75a;
+  --color-card: #f8f1de;
+  --color-card-border: #4b5658;
+  --color-card-back: #2d4c4f;
+  --color-card-back-border: #c99a3e;
+  --shadow-card: 0 10px 22px rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -43,9 +106,10 @@ a {
 }
 
 .auth-panel,
-.dashboard-panel {
-  background: #f8fbf8;
-  border: 1px solid #d5dfd8;
+.dashboard-panel,
+.profile-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   display: grid;
   gap: 18px;
@@ -61,20 +125,28 @@ a {
   place-items: center;
 }
 
-.dashboard-panel {
+.dashboard-panel,
+.profile-panel {
   width: min(720px, 100%);
 }
 
+.profile-shell {
+  display: grid;
+  place-items: center;
+}
+
 .muted-text {
-  color: #66746b;
+  color: var(--color-muted);
   margin: 6px 0 0;
 }
 
 .primary-link-button,
 .dashboard-actions a,
-.dashboard-actions button {
+.dashboard-actions button,
+.profile-actions a,
+.profile-actions button {
   align-items: center;
-  background: #173f35;
+  background: var(--color-primary);
   border: 0;
   border-radius: 8px;
   color: #fff;
@@ -97,6 +169,110 @@ a {
   width: 100%;
 }
 
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span,
+.theme-options legend {
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.field input {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  font: inherit;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.field input[readonly] {
+  color: var(--color-muted);
+}
+
+.theme-options {
+  border: 0;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.theme-options legend {
+  margin-bottom: 8px;
+}
+
+.theme-option {
+  align-items: center;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto 40px 1fr;
+  min-height: 50px;
+  padding: 10px 12px;
+}
+
+.theme-option:has(input:checked) {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 24%, transparent);
+}
+
+.theme-swatch {
+  background: linear-gradient(135deg, var(--preview-primary) 0 48%, var(--preview-accent) 48% 100%);
+  border: 1px solid var(--preview-border);
+  border-radius: 999px;
+  height: 28px;
+  width: 28px;
+}
+
+.theme-preview-classic-green-felt {
+  --preview-primary: #173f35;
+  --preview-accent: #d9a21b;
+  --preview-border: #d5dfd8;
+}
+
+.theme-preview-modern-light-table {
+  --preview-primary: #1f5d76;
+  --preview-accent: #f2b84b;
+  --preview-border: #d7e0e5;
+}
+
+.theme-preview-persian-tile {
+  --preview-primary: #075f66;
+  --preview-accent: #c48b2c;
+  --preview-border: #b7d7d3;
+}
+
+.theme-preview-dark-card-room {
+  --preview-primary: #22282b;
+  --preview-accent: #c99a3e;
+  --preview-border: #3a4547;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.profile-actions a,
+.profile-actions button {
+  min-width: 140px;
+}
+
+.profile-actions a {
+  background: var(--color-secondary);
+}
+
 .game {
   display: grid;
   gap: 18px;
@@ -107,7 +283,7 @@ a {
 .eyebrow,
 .panel-title,
 .row-heading span {
-  color: #66746b;
+  color: var(--color-muted);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -132,7 +308,7 @@ h2 {
 .new-game-button,
 .collect-actions button {
   align-items: center;
-  background: #173f35;
+  background: var(--color-primary);
   border: 0;
   border-radius: 8px;
   color: #fff;
@@ -185,8 +361,8 @@ h2 {
 .hand-row,
 .table-row,
 .pile-panel {
-  background: #f8fbf8;
-  border: 1px solid #d5dfd8;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 16px;
 }
@@ -228,11 +404,11 @@ h2 {
 .card {
   align-items: center;
   aspect-ratio: 0.7;
-  background: #fffdf7;
-  border: 1px solid #bac6bd;
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
   border-radius: 8px;
-  box-shadow: 0 8px 18px rgba(34, 44, 38, 0.08);
-  color: #17211b;
+  box-shadow: var(--shadow-card);
+  color: var(--color-text);
   cursor: pointer;
   display: grid;
   flex: 0 0 auto;
@@ -264,8 +440,8 @@ h2 {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / 16px 16px,
     linear-gradient(225deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / 16px 16px,
-    #245748;
-  border-color: #173f35;
+    var(--color-card-back);
+  border-color: var(--color-card-back-border);
   color: #fff;
 }
 
@@ -281,8 +457,8 @@ h2 {
 }
 
 .card.selected {
-  border-color: #d9a21b;
-  box-shadow: 0 0 0 4px rgba(217, 162, 27, 0.22);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
 .card.disabled {
@@ -298,7 +474,7 @@ h2 {
 .deck-count,
 .pile-count {
   align-items: center;
-  background: #d9a21b;
+  background: var(--color-accent);
   border: 2px solid #fff;
   border-radius: 999px;
   color: #17211b;
@@ -320,26 +496,26 @@ h2 {
 }
 
 .collect-actions button {
-  background: #425f7b;
+  background: var(--color-secondary);
   min-height: 34px;
   padding: 0 12px;
 }
 
 .empty-label {
-  color: #879089;
+  color: var(--color-muted);
   font-weight: 700;
   margin: 0;
 }
 
 .sur-count {
-  color: #173f35;
+  color: var(--color-primary);
   font-size: 0.9rem;
   font-weight: 800;
   margin: 0;
 }
 
 .pending-label {
-  color: #425f7b;
+  color: var(--color-secondary);
   font-size: 0.9rem;
   font-weight: 800;
   margin: 10px 0 0;
@@ -347,8 +523,8 @@ h2 {
 
 .score-board {
   align-items: center;
-  background: #f8fbf8;
-  border: 1px solid #d5dfd8;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   display: flex;
   gap: 20px;
@@ -364,13 +540,13 @@ h2 {
 }
 
 .score-grid span {
-  color: #66746b;
+  color: var(--color-muted);
   font-weight: 700;
   text-align: left;
 }
 
 .score-grid strong {
-  color: #173f35;
+  color: var(--color-primary);
 }
 
 .error-message {

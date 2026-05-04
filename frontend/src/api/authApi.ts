@@ -1,5 +1,5 @@
 import { API_BASE, request } from './http';
-import type { CurrentUser } from '../types/auth';
+import type { CurrentUser, PreferredTheme } from '../types/auth';
 
 export function googleLoginUrl() {
   return `${API_BASE}/oauth2/authorization/google`;
@@ -31,3 +31,9 @@ export function requireCurrentUser(): Promise<CurrentUser> {
   return request<CurrentUser>('/api/me');
 }
 
+export function updateProfile(profile: { name: string; preferredTheme: PreferredTheme }): Promise<CurrentUser> {
+  return request<CurrentUser>('/api/me/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(profile)
+  });
+}

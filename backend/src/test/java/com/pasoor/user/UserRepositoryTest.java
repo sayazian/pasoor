@@ -18,7 +18,8 @@ class UserRepositoryTest {
 
     @BeforeEach
     void clearUsers() {
-        userRepository.deleteAll();
+        userRepository.deleteAllInBatch();
+        userRepository.flush();
     }
 
     @Test

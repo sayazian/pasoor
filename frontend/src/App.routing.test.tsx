@@ -58,11 +58,13 @@ describe('App routing', () => {
     window.history.pushState({}, '', '/dashboard');
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json(currentUser));
 
-    render(<App />);
+    const { container } = render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Sahar' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /create game/i })).toHaveAttribute('href', '/game');
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass('theme-classic-green-felt');
   });
 
   it('redirects protected routes to login for anonymous sessions', async () => {
@@ -93,6 +95,65 @@ describe('App routing', () => {
 
     expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
     expect(screen.getByText('My turn')).toBeInTheDocument();
+  });
+
+  it('loads the profile route directly and saves edited profile fields', async () => {
+    window.history.pushState({}, '', '/profile');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/me/profile') && init?.method === 'PATCH') {
+        return Response.json({
+          ...currentUser,
+          name: 'Card Player',
+          preferredTheme: 'DARK_CARD_ROOM'
+        });
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /edit profile/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toHaveValue('sahar@example.com');
+
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Card Player' } });
+    fireEvent.click(screen.getByLabelText(/dark card room/i));
+    fireEvent.click(screen.getByRole('button', { name: /save profile/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/me/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: 'Card Player',
+          preferredTheme: 'DARK_CARD_ROOM'
+        }),
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+    expect(await screen.findByRole('heading', { name: 'Card Player' })).toBeInTheDocument();
+  });
+
+  it('applies the selected theme class from the authenticated user', async () => {
+    window.history.pushState({}, '', '/dashboard');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({
+        ...currentUser,
+        preferredTheme: 'PERSIAN_TILE'
+      })
+    );
+
+    const { container } = render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Sahar' })).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass('theme-persian-tile');
   });
 
   it('logs out from the dashboard and returns to login', async () => {

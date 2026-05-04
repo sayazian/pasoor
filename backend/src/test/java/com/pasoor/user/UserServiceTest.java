@@ -18,7 +18,8 @@ class UserServiceTest {
 
     @BeforeEach
     void clearUsers() {
-        userRepository.deleteAll();
+        userRepository.deleteAllInBatch();
+        userRepository.flush();
     }
 
     @Test
@@ -53,8 +54,41 @@ class UserServiceTest {
         ));
 
         assertThat(userRepository.count()).isEqualTo(1);
-        assertThat(user.getName()).isEqualTo("New Name");
+        assertThat(user.getName()).isEqualTo("Old Name");
         assertThat(user.getEmail()).isEqualTo("new@example.com");
         assertThat(user.getAvatarUrl()).isEqualTo("https://example.com/new-avatar.png");
+    }
+
+    @Test
+    void syncOAuthUserKeepsEditedDisplayName() {
+        UserService userService = new UserService(userRepository);
+        User user = userService.syncOAuthUser(new OAuthUserProfile("google-789", "Google Name", "player@example.com", null));
+        userService.updateProfile(user, new ProfileUpdateRequest("Table Name", PreferredTheme.PERSIAN_TILE));
+
+        User synced = userService.syncOAuthUser(new OAuthUserProfile(
+                "google-789",
+                "Changed Google Name",
+                "new-player@example.com",
+                "https://example.com/avatar.png"
+        ));
+
+        assertThat(synced.getName()).isEqualTo("Table Name");
+        assertThat(synced.getEmail()).isEqualTo("new-player@example.com");
+        assertThat(synced.getAvatarUrl()).isEqualTo("https://example.com/avatar.png");
+        assertThat(synced.getPreferredTheme()).isEqualTo(PreferredTheme.PERSIAN_TILE);
+    }
+
+    @Test
+    void updateProfileTrimsNameAndStoresTheme() {
+        UserService userService = new UserService(userRepository);
+        User user = userService.syncOAuthUser(new OAuthUserProfile("google-101", "Sahar", "sahar@example.com", null));
+
+        User updated = userService.updateProfile(user, new ProfileUpdateRequest(
+                "  Card Player  ",
+                PreferredTheme.DARK_CARD_ROOM
+        ));
+
+        assertThat(updated.getName()).isEqualTo("Card Player");
+        assertThat(updated.getPreferredTheme()).isEqualTo(PreferredTheme.DARK_CARD_ROOM);
     }
 }
