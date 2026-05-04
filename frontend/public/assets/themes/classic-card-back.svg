@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="252" viewBox="0 0 180 252">
+  <rect width="180" height="252" rx="14" fill="#073d25"/>
+  <rect x="8" y="8" width="164" height="236" rx="10" fill="none" stroke="#d8a338" stroke-width="3"/>
+  <rect x="17" y="17" width="146" height="218" rx="7" fill="none" stroke="#0a6a3f" stroke-width="2"/>
+  <path d="M18 34h144M18 58h144M18 82h144M18 106h144M18 130h144M18 154h144M18 178h144M18 202h144M18 226h144" stroke="#0b5a37" stroke-width="2"/>
+  <path d="M34 18v216M58 18v216M82 18v216M106 18v216M130 18v216M154 18v216" stroke="#0b5a37" stroke-width="2"/>
+  <path d="M30 42l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zM54 90l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zM30 138l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zM54 186l12-12 12 12-12 12zm48 0l12-12 12 12-12 12z" fill="#0e7045" opacity=".8"/>
+  <circle cx="90" cy="126" r="35" fill="#0a4a30" stroke="#d8a338" stroke-width="3"/>
+  <circle cx="90" cy="126" r="25" fill="none" stroke="#fff4c6" stroke-width="2" opacity=".6"/>
+  <text x="90" y="139" text-anchor="middle" font-family="Georgia,serif" font-size="38" font-weight="700" fill="#f0d890">P</text>
+</svg>

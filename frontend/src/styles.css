@@ -17,6 +17,17 @@
   --color-card-back: #245748;
   --color-card-back-border: #173f35;
   --shadow-card: 0 8px 18px rgba(34, 44, 38, 0.08);
+  --back-pattern: url("/assets/themes/classic-card-back.svg") center / cover;
+  --page-border: url("/assets/themes/classic-page-border.svg") 28 round;
+  --game-bg: #073d25;
+  --game-border: 2px solid #c8972f;
+  --panel-bg: rgba(7, 68, 38, 0.92);
+  --panel-border: rgba(216, 163, 56, 0.75);
+  --theme-title: #f0d890;
+  --theme-label: #f0c86b;
+  --theme-button-bg: #093f27;
+  --theme-button-border: 2px solid #d8a338;
+  --theme-button-color: #fff4c6;
   background: var(--color-page);
   color: var(--color-text);
   min-height: 100vh;
@@ -35,6 +46,17 @@
   --color-card-border: #c8d4dc;
   --color-card-back: #2c6f87;
   --color-card-back-border: #1f5d76;
+  --game-bg: #fbfaf6;
+  --game-border: 1px solid #ded8ce;
+  --panel-bg: #fffdf8;
+  --panel-border: #ded8ce;
+  --theme-title: #23384f;
+  --theme-label: #65727c;
+  --theme-button-bg: #23445f;
+  --theme-button-border: 0;
+  --theme-button-color: #fff;
+  --back-pattern: url("/assets/themes/modern-card-back.svg") center / cover;
+  --page-border: none;
 }
 
 .theme-persian-tile {
@@ -48,8 +70,22 @@
   --color-accent: #c48b2c;
   --color-card: #fffaf0;
   --color-card-border: #9dc6c0;
-  --color-card-back: #086b73;
-  --color-card-back-border: #064d52;
+  --color-card-back: #087f87;
+  --color-card-back-border: #c48b2c;
+  --game-bg:
+    linear-gradient(90deg, rgba(7, 95, 102, 0.12) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(0deg, rgba(196, 139, 44, 0.12) 1px, transparent 1px) 0 0 / 36px 36px,
+    #fbf1df;
+  --game-border: 4px double #07838a;
+  --panel-bg: rgba(255, 248, 233, 0.86);
+  --panel-border: #07838a;
+  --theme-title: #075f66;
+  --theme-label: #075f66;
+  --theme-button-bg: #077178;
+  --theme-button-border: 2px solid #c48b2c;
+  --theme-button-color: #fff8e9;
+  --back-pattern: url("/assets/themes/persian-card-back.svg") center / cover;
+  --page-border: url("/assets/themes/persian-page-border.svg") 32 round;
 }
 
 .theme-dark-card-room {
@@ -66,6 +102,17 @@
   --color-card-back: #2d4c4f;
   --color-card-back-border: #c99a3e;
   --shadow-card: 0 10px 22px rgba(0, 0, 0, 0.28);
+  --game-bg: #151819;
+  --game-border: 1px solid #3d4748;
+  --panel-bg: #202526;
+  --panel-border: #485255;
+  --theme-title: #42d783;
+  --theme-label: #45d188;
+  --theme-button-bg: #173b27;
+  --theme-button-border: 1px solid #c99a3e;
+  --theme-button-color: #f3d27a;
+  --back-pattern: url("/assets/themes/dark-card-back.svg") center / cover;
+  --page-border: url("/assets/themes/dark-page-border.svg") 24 round;
 }
 
 * {
@@ -90,7 +137,16 @@ a {
 }
 
 .app-shell {
+  border-image: var(--page-border);
+  border-style: solid;
+  border-width: 0;
   padding: 24px;
+}
+
+.theme-classic-green-felt .app-shell,
+.theme-persian-tile .app-shell,
+.theme-dark-card-room .app-shell {
+  border-width: 16px;
 }
 
 .loading {
@@ -369,10 +425,15 @@ a {
 }
 
 .game {
+  background: var(--game-bg);
+  border: var(--game-border);
+  border-radius: 8px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.14);
   display: grid;
   gap: 18px;
   max-width: 1280px;
   margin: 0 auto;
+  padding: 18px;
 }
 
 .eyebrow,
@@ -400,19 +461,101 @@ h2 {
   font-size: 1rem;
 }
 
+.left-status h1 {
+  color: var(--theme-title);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 3.3vw, 3rem);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.game .eyebrow,
+.game .panel-title,
+.game .row-heading span {
+  color: var(--theme-label);
+}
+
 .new-game-button,
+.secondary-action-button,
 .collect-actions button {
   align-items: center;
-  background: var(--color-primary);
   border: 0;
   border-radius: 8px;
-  color: #fff;
   cursor: pointer;
   display: inline-flex;
   gap: 8px;
   justify-content: center;
   min-height: 42px;
   padding: 0 16px;
+}
+
+.new-game-button,
+.collect-actions button {
+  background: var(--theme-button-bg);
+  border: var(--theme-button-border);
+  color: var(--theme-button-color);
+}
+
+.secondary-action-button {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.match-summary {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.match-summary div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.match-summary span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.match-summary strong {
+  color: var(--color-primary);
+  font-size: 1.2rem;
+}
+
+.match-summary p {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-primary);
+  font-weight: 800;
+  margin: 0;
+  padding-top: 10px;
+}
+
+.game-load-error {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 18px;
+  margin: auto;
+  max-width: 620px;
+  padding: 28px;
+}
+
+.game-load-error button {
+  background: var(--color-primary);
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 18px;
 }
 
 .board {
@@ -456,8 +599,8 @@ h2 {
 .hand-row,
 .table-row,
 .pile-panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 16px;
 }
@@ -532,23 +675,9 @@ h2 {
 }
 
 .card-back {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / 16px 16px,
-    linear-gradient(225deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / 16px 16px,
-    var(--color-card-back);
+  background: var(--back-pattern);
   border-color: var(--color-card-back-border);
   color: #fff;
-}
-
-.card-back-mark {
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  border-radius: 999px;
-  display: grid;
-  font-size: 1.35rem;
-  grid-row: 1 / -1;
-  height: 44px;
-  place-items: center;
-  width: 44px;
 }
 
 .card.selected {

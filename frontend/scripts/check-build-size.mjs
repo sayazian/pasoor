@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 const assetsDir = join(process.cwd(), 'dist', 'assets');
 const maxJavaScriptBytes = 250 * 1024;
-const maxCssBytes = 12 * 1024;
+const maxCssBytes = 16 * 1024;
 
 const files = await readdir(assetsDir);
 const jsFiles = files.filter((file) => file.endsWith('.js'));

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { GameState } from './types/game';
+import type { MatchState } from './types/match';
 
 const currentUser = {
   id: 'e51b2b5a-5797-40be-8771-caa189a2f8bd',
@@ -29,6 +30,57 @@ const newGameState: GameState = {
   pendingCaptureCard: null,
   lastCapturePlayer: null,
   score: null
+};
+
+const newMatchState: MatchState = {
+  id: '7ac598a2-37cc-4af7-bf2f-a6ea00ab97d4',
+  status: 'ACTIVE',
+  playerOne: currentUser,
+  playerTwo: null,
+  playerOneTotalScore: 0,
+  playerTwoTotalScore: 0,
+  winnerSide: null,
+  winner: null,
+  currentRound: {
+    id: '6b37b4ea-64dc-4965-b497-30db3b55f132',
+    roundNumber: 1,
+    status: 'ACTIVE',
+    gameState: newGameState,
+    playerOneRoundScore: null,
+    playerTwoRoundScore: null
+  }
+};
+
+const dealtMatchState: MatchState = {
+  ...newMatchState,
+  currentRound: {
+    ...newMatchState.currentRound,
+    gameState: {
+      ...newGameState,
+      deck: [],
+      deckCount: 40,
+      myHand: [
+        { id: 'CLUBS-TWO', suit: 'CLUBS', rank: 'TWO', value: 2 },
+        { id: 'CLUBS-THREE', suit: 'CLUBS', rank: 'THREE', value: 3 },
+        { id: 'CLUBS-FOUR', suit: 'CLUBS', rank: 'FOUR', value: 4 },
+        { id: 'CLUBS-FIVE', suit: 'CLUBS', rank: 'FIVE', value: 5 }
+      ],
+      opponentHand: [
+        { id: 'DIAMONDS-TWO', suit: 'DIAMONDS', rank: 'TWO', value: 2 },
+        { id: 'DIAMONDS-THREE', suit: 'DIAMONDS', rank: 'THREE', value: 3 },
+        { id: 'DIAMONDS-FOUR', suit: 'DIAMONDS', rank: 'FOUR', value: 4 },
+        { id: 'DIAMONDS-FIVE', suit: 'DIAMONDS', rank: 'FIVE', value: 5 }
+      ],
+      tableCards: [
+        { id: 'HEARTS-TWO', suit: 'HEARTS', rank: 'TWO', value: 2 },
+        { id: 'HEARTS-THREE', suit: 'HEARTS', rank: 'THREE', value: 3 },
+        { id: 'HEARTS-FOUR', suit: 'HEARTS', rank: 'FOUR', value: 4 },
+        { id: 'HEARTS-FIVE', suit: 'HEARTS', rank: 'FIVE', value: 5 }
+      ],
+      phase: 'PLAYING',
+      initialDealDone: true
+    }
+  }
 };
 
 const emptyFriends = {
@@ -100,14 +152,23 @@ describe('App routing', () => {
 
   it('loads the game route directly when the session is authenticated', async () => {
     window.history.pushState({}, '', '/game');
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = input.toString();
 
       if (url.endsWith('/api/me')) {
         return Response.json(currentUser);
       }
-      if (url.endsWith('/api/game/new')) {
-        return Response.json(newGameState);
+      if (url.endsWith('/api/matches') && init?.method === 'POST') {
+        return Response.json(newMatchState);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
+        return Response.json(newMatchState);
+      }
+      if (
+        url.endsWith(`/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/deal`) &&
+        init?.method === 'POST'
+      ) {
+        return Response.json(dealtMatchState);
       }
 
       return new Response('', { status: 404 });
@@ -117,6 +178,114 @@ describe('App routing', () => {
 
     expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
     expect(screen.getByText('My turn')).toBeInTheDocument();
+    expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Round');
+    expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Me0');
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/matches', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+
+    const deckButton = screen.getAllByRole('button', { name: /face-down card/i }).find((button) => !button.hasAttribute('disabled'));
+    expect(deckButton).toBeDefined();
+    fireEvent.click(deckButton!);
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `http://localhost:8080/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/deal`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    expect(await screen.findByText('40')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['CLASSIC_GREEN_FELT', 'theme-classic-green-felt'],
+    ['MODERN_LIGHT_TABLE', 'theme-modern-light-table'],
+    ['PERSIAN_TILE', 'theme-persian-tile'],
+    ['DARK_CARD_ROOM', 'theme-dark-card-room']
+  ] as const)('applies %s on the game route', async (preferredTheme, themeClass) => {
+    window.history.pushState({}, '', '/game');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json({
+          ...currentUser,
+          preferredTheme
+        });
+      }
+      if (url.endsWith('/api/matches') && init?.method === 'POST') {
+        return Response.json(newMatchState);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
+        return Response.json(newMatchState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    const { container } = render(<App />);
+
+    expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass(themeClass);
+  });
+
+  it('loads an existing match route directly', async () => {
+    window.history.pushState({}, '', `/game/${newMatchState.id}`);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
+        return Response.json(newMatchState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
+    expect(screen.getByText('My turn')).toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      'http://localhost:8080/api/matches',
+      expect.objectContaining({ method: 'POST' })
+    );
+  });
+
+  it('shows a game load error instead of staying on loading text', async () => {
+    window.history.pushState({}, '', '/game');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/matches')) {
+        return new Response('Backend unavailable', { status: 503 });
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /game could not be loaded/i })).toBeInTheDocument();
+    expect(screen.getByText('Backend unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Loading Pasoor...')).not.toBeInTheDocument();
   });
 
   it('loads the profile route directly and saves edited profile fields', async () => {

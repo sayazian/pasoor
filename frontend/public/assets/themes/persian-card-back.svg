@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="252" viewBox="0 0 180 252">
+  <rect width="180" height="252" rx="14" fill="#fff8e9"/>
+  <rect x="8" y="8" width="164" height="236" rx="10" fill="#087f87" stroke="#c48b2c" stroke-width="3"/>
+  <rect x="18" y="18" width="144" height="216" rx="6" fill="none" stroke="#fff8e9" stroke-width="2"/>
+  <defs>
+    <pattern id="tile" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M18 2l16 16-16 16L2 18z" fill="#fff8e9" opacity=".9"/>
+      <path d="M18 8l10 10-10 10L8 18z" fill="#087f87"/>
+      <circle cx="18" cy="18" r="5" fill="#c48b2c"/>
+      <path d="M0 18h36M18 0v36" stroke="#f1d29b" stroke-width="1.5"/>
+    </pattern>
+  </defs>
+  <rect x="22" y="22" width="136" height="208" rx="4" fill="url(#tile)"/>
+  <circle cx="90" cy="126" r="38" fill="#fff8e9" stroke="#c48b2c" stroke-width="4"/>
+  <circle cx="90" cy="126" r="28" fill="none" stroke="#087f87" stroke-width="3"/>
+  <text x="90" y="139" text-anchor="middle" font-family="Georgia,serif" font-size="38" font-weight="700" fill="#075f66">P</text>
+</svg>

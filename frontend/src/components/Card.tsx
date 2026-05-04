@@ -48,9 +48,7 @@ export default function Card({ card, faceDown, selected, disabled, onClick }: Ca
       onClick={onClick}
       aria-label={faceDown || !card ? 'Face-down card' : `${rankLabels[card.rank]} of ${card.suit.toLowerCase()}`}
     >
-      {faceDown || !card ? (
-        <span className="card-back-mark">P</span>
-      ) : (
+      {faceDown || !card ? null : (
         <>
           <span>{rankLabels[card.rank]}</span>
           <strong>{suitSymbols[card.suit]}</strong>

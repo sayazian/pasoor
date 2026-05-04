@@ -1,7 +1,11 @@
 package com.pasoor.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pasoor.friend.Friendship;
 import com.pasoor.friend.FriendshipRepository;
+import com.pasoor.match.GameRoundRepository;
+import com.pasoor.match.MatchRepository;
 import com.pasoor.user.User;
 import com.pasoor.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,13 +34,26 @@ class SecurityIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private FriendshipRepository friendshipRepository;
 
+    @Autowired
+    private MatchRepository matchRepository;
+
+    @Autowired
+    private GameRoundRepository roundRepository;
+
     @BeforeEach
     void clearUsers() {
+        roundRepository.deleteAllInBatch();
+        roundRepository.flush();
+        matchRepository.deleteAllInBatch();
+        matchRepository.flush();
         friendshipRepository.deleteAllInBatch();
         friendshipRepository.flush();
         userRepository.deleteAllInBatch();
@@ -66,6 +83,12 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void matchesRequireAuthentication() throws Exception {
+        mockMvc.perform(post("/api/matches"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void meReturnsAndPersistsAuthenticatedOAuthUser() throws Exception {
         mockMvc.perform(get("/api/me")
                         .with(oauth2Login().attributes(attributes -> {
@@ -88,6 +111,65 @@ class SecurityIntegrationTest {
         mockMvc.perform(post("/api/game/new").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deckCount").value(52));
+    }
+
+    @Test
+    void createMatchPersistsMatchAndFirstRound() throws Exception {
+        mockMvc.perform(post("/api/matches")
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.playerOne.email").value("player@example.com"))
+                .andExpect(jsonPath("$.playerOneTotalScore").value(0))
+                .andExpect(jsonPath("$.playerTwoTotalScore").value(0))
+                .andExpect(jsonPath("$.currentRound.roundNumber").value(1))
+                .andExpect(jsonPath("$.currentRound.gameState.deckCount").value(52));
+
+        assertThat(matchRepository.count()).isEqualTo(1);
+        assertThat(roundRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void matchDealUpdatesPersistedRound() throws Exception {
+        String createResponse = mockMvc.perform(post("/api/matches")
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode createJson = objectMapper.readTree(createResponse);
+        String matchId = createJson.get("id").asText();
+        String roundId = createJson.get("currentRound").get("id").asText();
+
+        mockMvc.perform(post("/api/matches/{matchId}/rounds/{roundId}/deal", matchId, roundId)
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentRound.id").value(roundId))
+                .andExpect(jsonPath("$.currentRound.gameState.deckCount").value(40))
+                .andExpect(jsonPath("$.currentRound.gameState.myHand").isArray())
+                .andExpect(jsonPath("$.currentRound.gameState.myHand.length()").value(4))
+                .andExpect(jsonPath("$.currentRound.gameState.tableCards.length()").value(4));
+
+        mockMvc.perform(get("/api/matches/{matchId}", matchId)
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentRound.gameState.deckCount").value(40));
+    }
+
+    @Test
+    void exitMatchMarksMatchAbandoned() throws Exception {
+        String createResponse = mockMvc.perform(post("/api/matches")
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String matchId = objectMapper.readTree(createResponse).get("id").asText();
+
+        mockMvc.perform(post("/api/matches/{matchId}/exit", matchId)
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ABANDONED"));
     }
 
     @Test

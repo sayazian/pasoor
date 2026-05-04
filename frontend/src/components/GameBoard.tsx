@@ -1,5 +1,6 @@
 import { RotateCcw } from 'lucide-react';
 import type { GameState, Player } from '../types/game';
+import type { MatchState } from '../types/match';
 import CollectedPile from './CollectedPile';
 import DeckPile from './DeckPile';
 import HandRow from './HandRow';
@@ -8,6 +9,7 @@ import TableRow from './TableRow';
 
 interface GameBoardProps {
   game: GameState;
+  match?: MatchState;
   selectedTableCards: string[];
   error: string | null;
   onDeal: () => void;
@@ -15,19 +17,24 @@ interface GameBoardProps {
   onToggleTableCard: (cardId: string) => void;
   onCapture: () => void;
   onNewGame: () => void;
+  onExitMatch?: () => void;
 }
 
 export default function GameBoard({
   game,
+  match,
   selectedTableCards,
   error,
   onDeal,
   onPlayCard,
   onToggleTableCard,
   onCapture,
-  onNewGame
+  onNewGame,
+  onExitMatch
 }: GameBoardProps) {
   const isPendingCapture = game.pendingCaptureCard !== null;
+  const matchFinished = match?.status === 'FINISHED';
+  const matchAbandoned = match?.status === 'ABANDONED';
 
   return (
     <section className="game">
@@ -40,10 +47,33 @@ export default function GameBoard({
             </div>
           </div>
           <DeckPile count={game.deckCount} phase={game.phase} onDeal={onDeal} />
+          {match && (
+            <div className="match-summary" aria-label="Match score">
+              <div>
+                <span>Round</span>
+                <strong>{match.currentRound.roundNumber}</strong>
+              </div>
+              <div>
+                <span>Me</span>
+                <strong>{match.playerOneTotalScore}</strong>
+              </div>
+              <div>
+                <span>Opponent</span>
+                <strong>{match.playerTwoTotalScore}</strong>
+              </div>
+              {matchFinished && <p>{winnerLabel(match)} wins the match</p>}
+              {matchAbandoned && <p>Match exited</p>}
+            </div>
+          )}
           <button className="new-game-button" type="button" onClick={onNewGame}>
             <RotateCcw size={18} aria-hidden="true" />
             New Game
           </button>
+          {onExitMatch && match?.status === 'ACTIVE' && (
+            <button className="secondary-action-button" type="button" onClick={onExitMatch}>
+              Exit Match
+            </button>
+          )}
         </aside>
 
         <div className="middle-column">
@@ -89,4 +119,15 @@ export default function GameBoard({
 
 function labelForPlayer(player: Player) {
   return player === 'ME' ? 'My' : "Opponent's";
+}
+
+function winnerLabel(match: MatchState) {
+  if (match.winnerSide === 'PLAYER_ONE') {
+    return 'Me';
+  }
+  if (match.winnerSide === 'PLAYER_TWO') {
+    return match.playerTwo?.name ?? 'Opponent';
+  }
+
+  return 'Winner';
 }

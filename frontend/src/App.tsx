@@ -74,7 +74,7 @@ export default function App() {
             }
           />
           <Route
-            path="/game"
+            path="/game/:matchId?"
             element={
               <ProtectedRoute authStatus={authStatus}>
                 <GamePage />

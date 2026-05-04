@@ -21,6 +21,10 @@ public class GameService {
         return gameState;
     }
 
+    public GameState createGame() {
+        return createNewGame();
+    }
+
     public synchronized GameState getGame() {
         return gameState;
     }
@@ -53,6 +57,10 @@ public class GameService {
         return gameState;
     }
 
+    public synchronized GameState deal(GameState state) {
+        return withState(state, this::deal);
+    }
+
     public synchronized GameState playCard(PlayCardRequest request) {
         if (gameState.getPhase() != GamePhase.PLAYING) {
             throw new IllegalStateException("Deal cards before playing.");
@@ -76,6 +84,10 @@ public class GameService {
         }
 
         return gameState;
+    }
+
+    public synchronized GameState playCard(GameState state, PlayCardRequest request) {
+        return withState(state, () -> playCard(request));
     }
 
     public synchronized GameState captureCards(CaptureCardsRequest request) {
@@ -102,6 +114,20 @@ public class GameService {
 
         finishTurn(request.player());
         return gameState;
+    }
+
+    public synchronized GameState captureCards(GameState state, CaptureCardsRequest request) {
+        return withState(state, () -> captureCards(request));
+    }
+
+    private GameState withState(GameState state, java.util.function.Supplier<GameState> action) {
+        GameState previousState = gameState;
+        gameState = state;
+        try {
+            return action.get();
+        } finally {
+            gameState = previousState;
+        }
     }
 
     private void finishTurn(Player player) {

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="252" viewBox="0 0 180 252">
+  <rect width="180" height="252" rx="14" fill="#111517"/>
+  <rect x="8" y="8" width="164" height="236" rx="10" fill="#173b27" stroke="#c99a3e" stroke-width="3"/>
+  <rect x="17" y="17" width="146" height="218" rx="7" fill="#0b251a" stroke="#45d188" stroke-width="1.5" opacity=".9"/>
+  <path d="M30 42l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zM54 90l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zM30 138l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zm48 0l12-12 12 12-12 12zM54 186l12-12 12 12-12 12zm48 0l12-12 12 12-12 12z" fill="#0f4a31" stroke="#45d188" stroke-width="1" opacity=".75"/>
+  <circle cx="90" cy="126" r="36" fill="#101819" stroke="#c99a3e" stroke-width="3"/>
+  <text x="90" y="139" text-anchor="middle" font-family="Georgia,serif" font-size="38" font-weight="700" fill="#42d783">P</text>
+</svg>

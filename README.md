@@ -38,7 +38,22 @@ Register this redirect URI in Google Cloud:
 http://localhost:8080/login/oauth2/code/google
 ```
 
-The authenticated user endpoint is `GET /api/me`, and logout is `POST /api/logout`. Existing `/api/game/**` endpoints remain public during this phase so the current game flow can keep working while authenticated match ownership is introduced later.
+The authenticated user endpoint is `GET /api/me`, and logout is `POST /api/logout`. Existing `/api/game/**` endpoints remain public so the legacy local game flow can keep working while authenticated match ownership is introduced.
+
+### Matches
+
+Phase 5 stores games inside authenticated matches and rounds. The frontend game page now creates or loads matches through:
+
+```text
+POST /api/matches
+GET /api/matches/{matchId}
+POST /api/matches/{matchId}/exit
+POST /api/matches/{matchId}/rounds/{roundId}/deal
+POST /api/matches/{matchId}/rounds/{roundId}/play
+POST /api/matches/{matchId}/rounds/{roundId}/capture
+```
+
+Each completed round updates match totals. If the 72-point winner rules do not produce a winner, the backend automatically creates the next round.
 
 ### Commands
 

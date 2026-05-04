@@ -26,6 +26,26 @@ describe('GameBoard performance-oriented rendering', () => {
     expect(screen.getByRole('button', { name: /capture/i })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /of/i })).toHaveLength(47);
   });
+
+  it('renders face-down cards with only the image-backed card back', () => {
+    render(
+      <GameBoard
+        game={{ ...gameStateWithLargeTable(0), deck: [card('DECK-TWO', 'CLUBS', 'TWO')], deckCount: 1 }}
+        selectedTableCards={[]}
+        error={null}
+        onDeal={vi.fn()}
+        onPlayCard={vi.fn()}
+        onToggleTableCard={vi.fn()}
+        onCapture={vi.fn()}
+        onNewGame={vi.fn()}
+      />
+    );
+
+    const faceDownCards = screen.getAllByRole('button', { name: /face-down card/i });
+
+    expect(faceDownCards.length).toBeGreaterThan(0);
+    expect(faceDownCards.every((cardButton) => cardButton.textContent === '')).toBe(true);
+  });
 });
 
 function gameStateWithLargeTable(tableSize: number): GameState {
