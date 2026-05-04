@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(new HttpStatusEntryPoint(UNAUTHORIZED)))
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/api/me", "/api/me/profile").authenticated()
+                        .requestMatchers("/api/me", "/api/me/profile", "/api/friends/**").authenticated()
                         .requestMatchers("/api/game/**").permitAll()
                         .requestMatchers("/api/logout", "/oauth2/**", "/login/**", "/logout").permitAll()
                         .anyRequest().permitAll()

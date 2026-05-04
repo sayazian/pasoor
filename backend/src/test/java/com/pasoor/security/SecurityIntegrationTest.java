@@ -1,5 +1,8 @@
 package com.pasoor.security;
 
+import com.pasoor.friend.Friendship;
+import com.pasoor.friend.FriendshipRepository;
+import com.pasoor.user.User;
 import com.pasoor.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
@@ -28,8 +32,13 @@ class SecurityIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private FriendshipRepository friendshipRepository;
+
     @BeforeEach
     void clearUsers() {
+        friendshipRepository.deleteAllInBatch();
+        friendshipRepository.flush();
         userRepository.deleteAllInBatch();
         userRepository.flush();
     }
@@ -47,6 +56,12 @@ class SecurityIntegrationTest {
                         .content("""
                                 {"name":"Sahar","preferredTheme":"MODERN_LIGHT_TABLE"}
                                 """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void friendsRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/friends"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -119,5 +134,158 @@ class SecurityIntegrationTest {
                                 {"name":"   ","preferredTheme":"CLASSIC_GREEN_FELT"}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void friendRequestCreatesOutgoingAndIncomingPendingViews() throws Exception {
+        User recipient = userRepository.saveAndFlush(new User(
+                "recipient-google",
+                "Recipient",
+                "friend@example.com",
+                null
+        ));
+
+        mockMvc.perform(post("/api/friends/requests")
+                        .with(oauthUser("requester-google", "Requester", "requester@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"friend@example.com","message":"Want to play Pasoor?"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outgoingRequests[0].recipient.email").value("friend@example.com"))
+                .andExpect(jsonPath("$.outgoingRequests[0].message").value("Want to play Pasoor?"))
+                .andExpect(jsonPath("$.incomingRequests").isEmpty())
+                .andExpect(jsonPath("$.friends").isEmpty());
+
+        mockMvc.perform(get("/api/friends")
+                        .with(oauthUser("recipient-google", "Recipient", recipient.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.incomingRequests[0].requester.email").value("requester@example.com"))
+                .andExpect(jsonPath("$.outgoingRequests").isEmpty());
+    }
+
+    @Test
+    void friendRequestRequiresExistingRecipient() throws Exception {
+        mockMvc.perform(post("/api/friends/requests")
+                        .with(oauthUser("requester-google", "Requester", "requester@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"missing@example.com","message":"Want to play?"}
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void friendRequestCannotTargetSelf() throws Exception {
+        mockMvc.perform(post("/api/friends/requests")
+                        .with(oauthUser("requester-google", "Requester", "requester@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"requester@example.com","message":"Want to play?"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void duplicatePendingFriendRequestIsBlocked() throws Exception {
+        userRepository.saveAndFlush(new User("recipient-google", "Recipient", "friend@example.com", null));
+
+        mockMvc.perform(post("/api/friends/requests")
+                        .with(oauthUser("requester-google", "Requester", "requester@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"friend@example.com","message":"Want to play?"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/friends/requests")
+                        .with(oauthUser("requester-google", "Requester", "requester@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"friend@example.com","message":"Still want to play?"}
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void acceptedRequestShowsFriendForBothUsers() throws Exception {
+        User requester = userRepository.saveAndFlush(new User(
+                "requester-google",
+                "Requester",
+                "requester@example.com",
+                null
+        ));
+        User recipient = userRepository.saveAndFlush(new User(
+                "recipient-google",
+                "Recipient",
+                "recipient@example.com",
+                null
+        ));
+        Friendship friendship = friendshipRepository.saveAndFlush(new Friendship(requester, recipient, "Want to play?"));
+
+        mockMvc.perform(post("/api/friends/requests/{id}/accept", friendship.getId())
+                        .with(oauthUser("recipient-google", "Recipient", "recipient@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.friends[0].email").value("requester@example.com"))
+                .andExpect(jsonPath("$.incomingRequests").isEmpty());
+
+        mockMvc.perform(get("/api/friends")
+                        .with(oauthUser("requester-google", "Requester", "requester@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.friends[0].email").value("recipient@example.com"))
+                .andExpect(jsonPath("$.outgoingRequests").isEmpty());
+    }
+
+    @Test
+    void rejectedRequestLeavesNoPendingOrAcceptedFriendship() throws Exception {
+        User requester = userRepository.saveAndFlush(new User(
+                "requester-google",
+                "Requester",
+                "requester@example.com",
+                null
+        ));
+        User recipient = userRepository.saveAndFlush(new User(
+                "recipient-google",
+                "Recipient",
+                "recipient@example.com",
+                null
+        ));
+        Friendship friendship = friendshipRepository.saveAndFlush(new Friendship(requester, recipient, "Want to play?"));
+
+        mockMvc.perform(post("/api/friends/requests/{id}/reject", friendship.getId())
+                        .with(oauthUser("recipient-google", "Recipient", "recipient@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.friends").isEmpty())
+                .andExpect(jsonPath("$.incomingRequests").isEmpty())
+                .andExpect(jsonPath("$.outgoingRequests").isEmpty());
+    }
+
+    @Test
+    void onlyRecipientCanRespondToFriendRequest() throws Exception {
+        User requester = userRepository.saveAndFlush(new User(
+                "requester-google",
+                "Requester",
+                "requester@example.com",
+                null
+        ));
+        User recipient = userRepository.saveAndFlush(new User(
+                "recipient-google",
+                "Recipient",
+                "recipient@example.com",
+                null
+        ));
+        Friendship friendship = friendshipRepository.saveAndFlush(new Friendship(requester, recipient, "Want to play?"));
+
+        mockMvc.perform(post("/api/friends/requests/{id}/accept", friendship.getId())
+                        .with(oauthUser("requester-google", "Requester", "requester@example.com")))
+                .andExpect(status().isForbidden());
+    }
+
+    private RequestPostProcessor oauthUser(String googleSubject, String name, String email) {
+        return oauth2Login().attributes(attributes -> {
+            attributes.put("sub", googleSubject);
+            attributes.put("name", name);
+            attributes.put("email", email);
+        });
     }
 }

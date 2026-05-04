@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { getCurrentUser, googleLoginUrl, logout, updateProfile } from './api/authApi';
+import FriendsPage from './pages/FriendsPage';
 import GamePage from './pages/GamePage';
 import type { CurrentUser, PreferredTheme } from './types/auth';
 
@@ -61,6 +62,14 @@ export default function App() {
             element={
               <ProtectedRoute authStatus={authStatus}>
                 <ProfilePage currentUser={currentUser!} onProfileUpdated={setCurrentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/friends"
+            element={
+              <ProtectedRoute authStatus={authStatus}>
+                <FriendsPage />
               </ProtectedRoute>
             }
           />
@@ -138,7 +147,7 @@ function DashboardPage({ currentUser, onLogout }: { currentUser: CurrentUser; on
         <nav className="dashboard-actions" aria-label="Dashboard actions">
           <Link to="/game">Create Game</Link>
           <Link to="/profile">Profile</Link>
-          <Link to="/dashboard">Friends</Link>
+          <Link to="/friends">Friends</Link>
           <button type="button" onClick={handleLogout}>
             Log out
           </button>

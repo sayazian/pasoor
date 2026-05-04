@@ -1,5 +1,15 @@
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
@@ -11,9 +21,23 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
   });
 
   if (!response.ok) {
-    throw new Error(await response.text());
+    throw new ApiError(await getErrorMessage(response), response.status);
   }
 
   return response.json();
 }
 
+async function getErrorMessage(response: Response): Promise<string> {
+  const text = await response.text();
+
+  if (!text) {
+    return `Request failed with status ${response.status}.`;
+  }
+
+  try {
+    const parsed = JSON.parse(text) as Partial<Record<'message' | 'detail' | 'error', string>>;
+    return parsed.message ?? parsed.detail ?? parsed.error ?? text;
+  } catch {
+    return text;
+  }
+}
