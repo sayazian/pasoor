@@ -38,12 +38,6 @@ button {
   margin: 0 auto;
 }
 
-.status-bar {
-  display: flex;
-  align-items: center;
-  min-height: 68px;
-}
-
 .eyebrow,
 .panel-title,
 .row-heading span {
@@ -105,6 +99,11 @@ h2 {
 
 .left-column {
   align-content: center;
+  justify-items: stretch;
+}
+
+.left-status {
+  align-self: end;
 }
 
 .right-column {
@@ -266,6 +265,48 @@ h2 {
   margin: 0;
 }
 
+.sur-count {
+  color: #173f35;
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.pending-label {
+  color: #425f7b;
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin: 10px 0 0;
+}
+
+.score-board {
+  align-items: center;
+  background: #f8fbf8;
+  border: 1px solid #d5dfd8;
+  border-radius: 8px;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.score-grid {
+  display: grid;
+  gap: 6px 18px;
+  grid-template-columns: auto auto auto;
+  text-align: right;
+}
+
+.score-grid span {
+  color: #66746b;
+  font-weight: 700;
+  text-align: left;
+}
+
+.score-grid strong {
+  color: #173f35;
+}
+
 .error-message {
   background: #fff4f3;
   border: 1px solid #f0b6ae;
@@ -275,18 +316,17 @@ h2 {
   padding: 12px 14px;
 }
 
-.bottom-actions {
-  display: flex;
-  justify-content: center;
-  padding-bottom: 4px;
-}
-
 @media (max-width: 860px) {
   .app-shell {
     padding: 14px;
   }
 
   .row-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .score-board {
     align-items: flex-start;
     flex-direction: column;
   }

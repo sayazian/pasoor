@@ -13,6 +13,12 @@ public class GameState {
     private Player currentTurn = Player.ME;
     private GamePhase phase = GamePhase.NEW;
     private boolean initialDealDone;
+    private int mySurCount;
+    private int opponentSurCount;
+    private Player pendingCapturePlayer;
+    private Card pendingCaptureCard;
+    private Player lastCapturePlayer;
+    private Score score;
 
     public int getDeckCount() {
         return deck.size();
@@ -88,5 +94,53 @@ public class GameState {
 
     public void setInitialDealDone(boolean initialDealDone) {
         this.initialDealDone = initialDealDone;
+    }
+
+    public int getMySurCount() {
+        return mySurCount;
+    }
+
+    public void setMySurCount(int mySurCount) {
+        this.mySurCount = mySurCount;
+    }
+
+    public int getOpponentSurCount() {
+        return opponentSurCount;
+    }
+
+    public void setOpponentSurCount(int opponentSurCount) {
+        this.opponentSurCount = opponentSurCount;
+    }
+
+    public Player getPendingCapturePlayer() {
+        return pendingCapturePlayer;
+    }
+
+    public void setPendingCapturePlayer(Player pendingCapturePlayer) {
+        this.pendingCapturePlayer = pendingCapturePlayer;
+    }
+
+    public Card getPendingCaptureCard() {
+        return pendingCaptureCard;
+    }
+
+    public void setPendingCaptureCard(Card pendingCaptureCard) {
+        this.pendingCaptureCard = pendingCaptureCard;
+    }
+
+    public Player getLastCapturePlayer() {
+        return lastCapturePlayer;
+    }
+
+    public void setLastCapturePlayer(Player lastCapturePlayer) {
+        this.lastCapturePlayer = lastCapturePlayer;
+    }
+
+    public Score getScore() {
+        return score;
+    }
+
+    public void setScore(Score score) {
+        this.score = score;
     }
 }

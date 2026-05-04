@@ -34,4 +34,21 @@ export interface GameState {
   currentTurn: Player;
   phase: GamePhase;
   initialDealDone: boolean;
+  mySurCount: number;
+  opponentSurCount: number;
+  pendingCapturePlayer: Player | null;
+  pendingCaptureCard: Card | null;
+  lastCapturePlayer: Player | null;
+  score: Score | null;
+}
+
+export interface Score {
+  myScore: number;
+  opponentScore: number;
+  myClubCount: number;
+  opponentClubCount: number;
+  mySurPoints: number;
+  opponentSurPoints: number;
+  myCardPoints: number;
+  opponentCardPoints: number;
 }

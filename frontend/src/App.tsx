@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collectCards, dealCards, newGame, playCard } from './api/gameApi';
+import { captureCards, dealCards, newGame, playCard } from './api/gameApi';
 import GameBoard from './components/GameBoard';
 import type { GameState, Player } from './types/game';
 
@@ -35,25 +35,32 @@ export default function App() {
   }
 
   async function handlePlayCard(player: Player, cardId: string) {
-    await run(() => playCard(player, cardId));
+    const nextGame = await run(() => playCard(player, cardId));
+    if (nextGame) {
+      setSelectedTableCards([]);
+    }
+  }
+
+  async function handleCapture() {
+    if (!game?.pendingCapturePlayer) {
+      setError('Drop a card before capturing.');
+      return;
+    }
+    if (selectedTableCards.length === 0) {
+      setError('Select at least one table card to capture.');
+      return;
+    }
+
+    const nextGame = await run(() => captureCards(game.pendingCapturePlayer!, selectedTableCards));
+    if (nextGame) {
+      setSelectedTableCards([]);
+    }
   }
 
   function handleToggleTableCard(cardId: string) {
     setSelectedTableCards((current) =>
       current.includes(cardId) ? current.filter((id) => id !== cardId) : [...current, cardId]
     );
-  }
-
-  async function handleCollect(player: Player) {
-    if (selectedTableCards.length === 0) {
-      setError('Select at least one table card first.');
-      return;
-    }
-
-    const nextGame = await run(() => collectCards(player, selectedTableCards));
-    if (nextGame) {
-      setSelectedTableCards([]);
-    }
   }
 
   if (!game) {
@@ -69,7 +76,7 @@ export default function App() {
         onDeal={handleDeal}
         onPlayCard={handlePlayCard}
         onToggleTableCard={handleToggleTableCard}
-        onCollect={handleCollect}
+        onCapture={handleCapture}
         onNewGame={handleNewGame}
       />
     </main>

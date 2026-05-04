@@ -7,11 +7,12 @@ interface HandRowProps {
   cards: CardType[];
   currentTurn: Player;
   faceDown?: boolean;
+  disabled?: boolean;
   onPlayCard: (player: Player, cardId: string) => void;
 }
 
-export default function HandRow({ title, player, cards, currentTurn, faceDown, onPlayCard }: HandRowProps) {
-  const isTurn = currentTurn === player;
+export default function HandRow({ title, player, cards, currentTurn, faceDown, disabled, onPlayCard }: HandRowProps) {
+  const isTurn = currentTurn === player && !disabled;
 
   return (
     <section className="hand-row">

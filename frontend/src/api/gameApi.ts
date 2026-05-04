@@ -33,9 +33,9 @@ export function playCard(player: Player, cardId: string): Promise<GameState> {
   });
 }
 
-export function collectCards(player: Player, cardIds: string[]): Promise<GameState> {
-  return request<GameState>('/collect', {
+export function captureCards(player: Player, capturedTableCardIds: string[]): Promise<GameState> {
+  return request<GameState>('/capture', {
     method: 'POST',
-    body: JSON.stringify({ player, cardIds })
+    body: JSON.stringify({ player, capturedTableCardIds })
   });
 }

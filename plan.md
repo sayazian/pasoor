@@ -116,10 +116,10 @@ Request body:
 }
 ```
 
-Moves a card from the selected player's hand to the table if it is that player's turn.
+Moves a card from the selected player's hand to the table and starts a pending capture decision.
 
 ```text
-POST /api/game/collect
+POST /api/game/capture
 ```
 
 Request body:
@@ -127,13 +127,11 @@ Request body:
 ```json
 {
   "player": "ME",
-  "cardIds": ["SPADES-3", "DIAMONDS-J"]
+  "capturedTableCardIds": ["SPADES-4"]
 }
 ```
 
-Moves selected table cards into the selected player's collected pile.
-
-For this version, collection should be permissive. The app does not need to enforce real Pasoor capture rules yet.
+Validates the selected capture and moves the dropped card plus captured table cards into that player's collected pile.
 
 ### Game Flow Rules
 
@@ -160,7 +158,9 @@ For this version, collection should be permissive. The app does not need to enfo
 11. When both hands are empty:
    - if the deck still has cards, clicking the deck deals 4 cards to each player
    - if the deck is empty, the game ends after all cards have been played
-12. The `New Game` button starts over from step 1.
+12. When the game ends, the last player who captured receives any cards left on the table.
+13. Final scores are calculated and shown.
+14. The `New Game` button starts over from step 1.
 
 ## Frontend Plan
 
@@ -183,7 +183,7 @@ Create a React TypeScript frontend that renders the board and calls the backend 
 - `HandRow`
   - renders either my hand or opponent hand
   - my cards are face up
-  - opponent cards can be rendered face down or face up depending on desired visibility, but they must be clickable because I will move them manually
+  - opponent cards are rendered face up and clickable because I will move them manually
 
 - `TableRow`
   - renders all dropped, uncollected cards face up
@@ -198,6 +198,10 @@ Create a React TypeScript frontend that renders the board and calls the backend 
 
 - `NewGameButton`
   - calls `/api/game/new`
+
+- `ScoreBoard`
+  - shows final score after the game finishes
+  - shows club counts, card points, and sur points
 
 ### Layout
 
@@ -232,17 +236,14 @@ When a hand card is clicked:
 
 1. Determine whether the clicked card belongs to `ME` or `OPPONENT`.
 2. Call `POST /api/game/play`.
-3. Move the card to the table using the returned state.
-4. Advance the turn.
+3. Move the card to the table and mark it as pending capture.
 
 When table cards are selected:
 
 1. Highlight selected cards.
-2. Provide controls to collect them into:
-   - my used pile
-   - opponent used pile
-3. Call `POST /api/game/collect`.
-4. Move selected cards into the chosen pile using the returned state.
+2. If a dropped card is pending, use `Capture` to call `POST /api/game/capture`.
+3. If no capture is available after a card is dropped, the backend automatically advances the turn.
+4. Do not show eligible capture-group hints.
 
 When `New Game` is pressed:
 
@@ -267,28 +268,26 @@ When `New Game` is pressed:
 1. Scaffold the Spring Boot backend.
 2. Add card, player, phase, and game state models.
 3. Implement deck creation and shuffle.
-4. Implement new game, deal, play, and collect logic.
+4. Implement new game, deal, validated play, and capture logic.
 5. Add REST controller endpoints.
 6. Add backend tests for:
    - new game starts with 52 cards
    - first deal leaves 40 cards in deck
    - later deal removes 8 cards
-   - playing a card moves it to the table
-   - collecting table cards moves them to the selected pile
+   - playing a card with no capture moves it to the table
+   - valid captures move the played card and captured cards to the selected player's pile
+   - a card that can capture cannot be dropped
 7. Scaffold the React TypeScript frontend.
 8. Add frontend API client.
 9. Build the three-column board layout.
 10. Add deck count overlay.
-11. Wire deck click, hand-card click, table selection, collection, and new game.
+11. Wire deck click, hand-card click, table selection, capture, and new game.
 12. Run backend and frontend locally.
 13. Manually verify the full game sequence.
 
 ## Out of Scope For This Version
 
-- Real Pasoor capture rules
-- Scoring
 - Multiplayer networking
 - Authentication
 - Persistence
 - AI opponent
-

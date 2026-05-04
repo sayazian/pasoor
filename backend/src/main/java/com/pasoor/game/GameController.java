@@ -38,9 +38,9 @@ public class GameController {
         return gameService.playCard(request);
     }
 
-    @PostMapping("/collect")
-    public GameState collectCards(@RequestBody CollectCardsRequest request) {
-        return gameService.collectCards(request);
+    @PostMapping("/capture")
+    public GameState captureCards(@RequestBody CaptureCardsRequest request) {
+        return gameService.captureCards(request);
     }
 
     @org.springframework.web.bind.annotation.ExceptionHandler({

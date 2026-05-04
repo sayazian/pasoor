@@ -4,23 +4,36 @@ import Card from './Card';
 interface TableRowProps {
   cards: CardType[];
   selectedCardIds: string[];
+  pendingCaptureCardId: string | null;
+  pendingCapturePlayer: Player | null;
   onToggleCard: (cardId: string) => void;
-  onCollect: (player: Player) => void;
+  onCapture: () => void;
 }
 
-export default function TableRow({ cards, selectedCardIds, onToggleCard, onCollect }: TableRowProps) {
+export default function TableRow({
+  cards,
+  selectedCardIds,
+  pendingCaptureCardId,
+  pendingCapturePlayer,
+  onToggleCard,
+  onCapture
+}: TableRowProps) {
+  const canChooseCapture = pendingCaptureCardId !== null;
+
   return (
     <section className="table-row">
       <div className="row-heading">
         <h2>Table</h2>
-        <div className="collect-actions">
-          <button type="button" onClick={() => onCollect('OPPONENT')}>
-            To opponent
-          </button>
-          <button type="button" onClick={() => onCollect('ME')}>
-            To me
-          </button>
-        </div>
+        {canChooseCapture ? (
+          <div className="collect-actions">
+            <span>{selectedCardIds.length} selected</span>
+            <button type="button" onClick={onCapture}>
+              Capture
+            </button>
+          </div>
+        ) : (
+          <span>Drop a card first</span>
+        )}
       </div>
       <div className="cards-row table-cards">
         {cards.length === 0 ? (
@@ -30,12 +43,14 @@ export default function TableRow({ cards, selectedCardIds, onToggleCard, onColle
             <Card
               key={card.id}
               card={card}
-              selected={selectedCardIds.includes(card.id)}
+              selected={selectedCardIds.includes(card.id) || card.id === pendingCaptureCardId}
+              disabled={!canChooseCapture || card.id === pendingCaptureCardId}
               onClick={() => onToggleCard(card.id)}
             />
           ))
         )}
       </div>
+      {pendingCapturePlayer && <p className="pending-label">{pendingCapturePlayer === 'ME' ? 'My' : "Opponent's"} capture pending</p>}
     </section>
   );
 }
