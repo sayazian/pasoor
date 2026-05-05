@@ -12,10 +12,9 @@ public record GameInviteResponse(
         FriendSummary recipient,
         String recipientEmail,
         String token,
-        String inviteLink,
         MatchResponse match
 ) {
-    static GameInviteResponse from(GameInvite invite, String inviteLink, MatchResponse match) {
+    static GameInviteResponse from(GameInvite invite, MatchResponse match) {
         return new GameInviteResponse(
                 invite.getId(),
                 invite.getStatus(),
@@ -23,7 +22,6 @@ public record GameInviteResponse(
                 FriendSummary.from(invite.getRecipient()),
                 invite.getRecipientEmail(),
                 invite.getToken(),
-                inviteLink,
                 match
         );
     }

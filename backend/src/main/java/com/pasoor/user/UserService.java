@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Service
@@ -27,6 +29,7 @@ public class UserService {
 
         user.setEmail(profile.email());
         user.setAvatarUrl(profile.avatarUrl());
+        user.markSeen(Instant.now());
 
         return userRepository.save(user);
     }

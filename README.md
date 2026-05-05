@@ -57,19 +57,23 @@ Each completed round updates match totals. If the 72-point winner rules do not p
 
 ### Game Invites
 
-Phase 6 lets a user invite an accepted friend to a match. The backend logs the invite link instead of sending real email for now.
+Game invites are live-only. A user can invite an accepted friend only while that friend is online.
 
 ```text
 POST /api/matches/{matchId}/invite
+GET /api/invites
 GET /api/invites/{token}
 POST /api/invites/{token}/accept
+POST /api/invites/{token}/decline
 ```
 
-Invites are only allowed for accepted friends. Creating an invite moves the match to `WAITING`; accepting the invite sets `playerTwo` and returns the match to `ACTIVE`.
+Creating an invite moves the match to `WAITING` and the invited online friend sees a popup from the frontend's `GET /api/invites` polling. Accepting sets `playerTwo` and returns the match to `ACTIVE`; declining marks the invite `DECLINED` and abandons the waiting match so the inviter is informed.
 
 ### Two-Player Visibility
 
 Phase 7 makes match game state viewer-specific. Match responses include `viewerSide`, return the authenticated player's cards in `currentRound.gameState.myHand`, and return only `opponentHandCount` for the other player's hand. Opponent card identities are not returned by match APIs.
+
+API errors are returned as structured JSON with `timestamp`, `status`, `error`, `code`, `message`, and `path`.
 
 For match play and capture actions, a user can only act as their own match side, and turn validation remains owned by the backend game service. The frontend renders opponent cards as disabled backs and polls the match while it is active or waiting.
 

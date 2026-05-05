@@ -95,7 +95,8 @@ const friend = {
   id: '1f5da4d5-9bd1-4968-8c3b-466b27940f5a',
   name: 'Friend',
   email: 'friend@example.com',
-  avatarUrl: null
+  avatarUrl: null,
+  online: true
 };
 
 const incomingRequest = {
@@ -106,15 +107,26 @@ const incomingRequest = {
   message: 'Want to play Pasoor?'
 };
 
-const pendingInvite = {
+const liveInvite = {
   id: '58f4dfeb-e064-454e-aa9b-7517ad8e120f',
-  status: 'PENDING',
+  status: 'INVITED',
   sender: currentUser,
   recipient: friend,
   recipientEmail: 'friend@example.com',
   token: 'invite-token',
-  inviteLink: 'http://localhost:5173/invite/invite-token',
   match: waitingMatchState
+};
+
+const emptyGameInvites = {
+  liveInvites: []
+};
+
+const incomingGameInvite = {
+  ...liveInvite,
+  id: '6119e214-e57d-49ba-9316-1e712815b56b',
+  sender: friend,
+  recipient: currentUser,
+  recipientEmail: currentUser.email
 };
 
 describe('App routing', () => {
@@ -152,6 +164,102 @@ describe('App routing', () => {
     expect(screen.getByRole('link', { name: /friends/i })).toHaveAttribute('href', '/friends');
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
     expect(container.firstElementChild).toHaveClass('theme-classic-green-felt');
+  });
+
+  it('shows a live game invite popup after login and accepts it', async () => {
+    window.history.pushState({}, '', '/dashboard');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/invites') && !init?.method) {
+        return Response.json({
+          liveInvites: [incomingGameInvite]
+        });
+      }
+      if (url.endsWith('/api/invites/invite-token/accept') && init?.method === 'POST') {
+        return Response.json({
+          ...incomingGameInvite,
+          status: 'ACCEPTED',
+          match: {
+            ...waitingMatchState,
+            status: 'ACTIVE',
+            playerTwo: currentUser
+          }
+        });
+      }
+      if (url.endsWith(`/api/matches/${waitingMatchState.id}`) && !init?.method) {
+        return Response.json({
+          ...waitingMatchState,
+          status: 'ACTIVE',
+          playerTwo: currentUser
+        });
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /friend invited you/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^accept$/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/invites/invite-token/accept', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+    expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
+  });
+
+  it('denies a live game invite from the popup', async () => {
+    window.history.pushState({}, '', '/dashboard');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/invites') && !init?.method) {
+        return Response.json({
+          liveInvites: [incomingGameInvite]
+        });
+      }
+      if (url.endsWith('/api/invites/invite-token/decline') && init?.method === 'POST') {
+        return Response.json({
+          ...incomingGameInvite,
+          status: 'DECLINED',
+          match: {
+            ...waitingMatchState,
+            status: 'ABANDONED'
+          }
+        });
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /deny/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/invites/invite-token/decline', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('redirects protected routes to login for anonymous sessions', async () => {
@@ -280,6 +388,47 @@ describe('App routing', () => {
     );
   });
 
+  it('returns to the dashboard after exiting a match', async () => {
+    window.history.pushState({}, '', `/game/${newMatchState.id}`);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/invites') && !init?.method) {
+        return Response.json(emptyGameInvites);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`) && !init?.method) {
+        return Response.json(newMatchState);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}/exit`) && init?.method === 'POST') {
+        return Response.json({
+          ...newMatchState,
+          status: 'ABANDONED'
+        });
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /exit match/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(`http://localhost:8080/api/matches/${newMatchState.id}/exit`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+    expect(await screen.findByRole('heading', { name: 'Sahar' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create game/i })).toHaveAttribute('href', '/game');
+  });
+
   it('shows a game load error instead of staying on loading text', async () => {
     window.history.pushState({}, '', '/game');
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -300,52 +449,6 @@ describe('App routing', () => {
     expect(await screen.findByRole('heading', { name: /game could not be loaded/i })).toBeInTheDocument();
     expect(screen.getByText('Backend unavailable')).toBeInTheDocument();
     expect(screen.queryByText('Loading Pasoor...')).not.toBeInTheDocument();
-  });
-
-  it('loads an invite route and accepts the game invite', async () => {
-    window.history.pushState({}, '', '/invite/invite-token');
-    const acceptedInvite = {
-      ...pendingInvite,
-      status: 'ACCEPTED',
-      match: {
-        ...newMatchState,
-        playerTwo: friend
-      }
-    };
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = input.toString();
-
-      if (url.endsWith('/api/me')) {
-        return Response.json(friend);
-      }
-      if (url.endsWith('/api/invites/invite-token') && !init?.method) {
-        return Response.json(pendingInvite);
-      }
-      if (url.endsWith('/api/invites/invite-token/accept') && init?.method === 'POST') {
-        return Response.json(acceptedInvite);
-      }
-      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
-        return Response.json(acceptedInvite.match);
-      }
-
-      return new Response('', { status: 404 });
-    });
-
-    render(<App />);
-
-    expect(await screen.findByRole('heading', { name: /sahar invited you/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /accept invite/i }));
-
-    await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/invites/invite-token/accept', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-    });
-    expect(await screen.findByText('My turn')).toBeInTheDocument();
   });
 
   it('loads the profile route directly and saves edited profile fields', async () => {
@@ -407,6 +510,9 @@ describe('App routing', () => {
           outgoingRequests: []
         });
       }
+      if (url.endsWith('/api/invites')) {
+        return Response.json(emptyGameInvites);
+      }
 
       return new Response('', { status: 404 });
     });
@@ -418,6 +524,35 @@ describe('App routing', () => {
     expect(screen.getByText('Want to play Pasoor?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send friend request/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /invite to game/i })).toBeInTheDocument();
+  });
+
+  it('does not show invite to game for an offline friend', async () => {
+    window.history.pushState({}, '', '/friends');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/friends')) {
+        return Response.json({
+          friends: [{ ...friend, online: false }],
+          incomingRequests: [],
+          outgoingRequests: []
+        });
+      }
+      if (url.endsWith('/api/invites')) {
+        return Response.json(emptyGameInvites);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText('friend@example.com')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /invite to game/i })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Offline').length).toBeGreaterThan(0);
   });
 
   it('invites an accepted friend to a waiting match', async () => {
@@ -435,11 +570,14 @@ describe('App routing', () => {
           outgoingRequests: []
         });
       }
+      if (url.endsWith('/api/invites') && !init?.method) {
+        return Response.json(emptyGameInvites);
+      }
       if (url.endsWith('/api/matches') && init?.method === 'POST') {
         return Response.json(newMatchState);
       }
       if (url.endsWith(`/api/matches/${newMatchState.id}/invite`) && init?.method === 'POST') {
-        return Response.json(pendingInvite);
+        return Response.json(liveInvite);
       }
       if (url.endsWith(`/api/matches/${newMatchState.id}`) && !init?.method) {
         return Response.json(waitingMatchState);
@@ -463,7 +601,37 @@ describe('App routing', () => {
       });
     });
     expect(await screen.findByRole('heading', { name: /waiting for friend/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/invite link/i)).toHaveValue('http://localhost:5173/invite/invite-token');
+    expect(screen.getByText(/your friend has been invited/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /resend invite/i })).not.toBeInTheDocument();
+  });
+
+  it('informs the inviter when a live game invite is denied', async () => {
+    window.history.pushState(
+      { usr: { inviteToken: liveInvite.token }, key: 'declined-invite' },
+      '',
+      `/game/${newMatchState.id}`
+    );
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
+        return Response.json({
+          ...waitingMatchState,
+          status: 'ABANDONED'
+        });
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText(/your friend denied the game invite/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveClass('secondary-action-button');
+    expect(screen.getByRole('link', { name: /friends/i })).toHaveClass('secondary-action-button');
   });
 
   it('sends a friend request and shows it as outgoing', async () => {
@@ -476,6 +644,9 @@ describe('App routing', () => {
       }
       if (url.endsWith('/api/friends') && !init?.method) {
         return Response.json(emptyFriends);
+      }
+      if (url.endsWith('/api/invites') && !init?.method) {
+        return Response.json(emptyGameInvites);
       }
       if (url.endsWith('/api/friends/requests') && init?.method === 'POST') {
         return Response.json({
@@ -530,6 +701,9 @@ describe('App routing', () => {
       if (url.endsWith('/api/friends') && !init?.method) {
         return Response.json(emptyFriends);
       }
+      if (url.endsWith('/api/invites') && !init?.method) {
+        return Response.json(emptyGameInvites);
+      }
       if (url.endsWith('/api/friends/requests') && init?.method === 'POST') {
         return Response.json(
           {
@@ -570,6 +744,9 @@ describe('App routing', () => {
           incomingRequests: [incomingRequest],
           outgoingRequests: []
         });
+      }
+      if (url.endsWith('/api/invites') && !init?.method) {
+        return Response.json(emptyGameInvites);
       }
       if (url.endsWith(`/api/friends/requests/${incomingRequest.id}/accept`) && init?.method === 'POST') {
         return Response.json({

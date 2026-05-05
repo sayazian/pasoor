@@ -5,6 +5,7 @@ export interface FriendSummary {
   name: string;
   email: string;
   avatarUrl: string | null;
+  online: boolean;
 }
 
 export interface FriendRequestSummary {

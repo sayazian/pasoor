@@ -1,6 +1,6 @@
 import type { MatchPlayer, MatchState } from './match';
 
-export type GameInviteStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED';
+export type GameInviteStatus = 'INVITED' | 'ACCEPTED' | 'DECLINED';
 
 export interface GameInvite {
   id: string;
@@ -9,6 +9,9 @@ export interface GameInvite {
   recipient: MatchPlayer;
   recipientEmail: string;
   token: string;
-  inviteLink: string;
   match: MatchState;
+}
+
+export interface GameInviteListResponse {
+  liveInvites: GameInvite[];
 }

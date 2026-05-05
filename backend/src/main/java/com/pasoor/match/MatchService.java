@@ -10,6 +10,8 @@ import com.pasoor.game.PlayCardRequest;
 import com.pasoor.game.Player;
 import com.pasoor.game.Score;
 import com.pasoor.user.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ import java.util.UUID;
 
 @Service
 public class MatchService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MatchService.class);
     private final MatchRepository matchRepository;
     private final GameRoundRepository roundRepository;
     private final GameService gameService;
@@ -43,6 +46,7 @@ public class MatchService {
     public MatchResponse createMatch(User playerOne) {
         PasoorMatch match = matchRepository.save(new PasoorMatch(playerOne));
         GameRound round = roundRepository.save(new GameRound(match, 1, writeGameState(gameService.createGame())));
+        LOGGER.info("Match {} created by playerOne {}.", match.getId(), playerOne.getId());
 
         return response(match, round, playerOne);
     }
@@ -59,6 +63,7 @@ public class MatchService {
     public MatchResponse exitMatch(User user, UUID matchId) {
         PasoorMatch match = ownedMatch(user, matchId);
         match.setStatus(MatchStatus.ABANDONED);
+        LOGGER.info("Match {} abandoned by user {}.", match.getId(), user.getId());
         return response(match, currentRound(match), user);
     }
 
@@ -140,6 +145,7 @@ public class MatchService {
                     match.setStatus(MatchStatus.FINISHED);
                     match.setWinnerSide(winner);
                     match.setWinner(winner == MatchWinner.PLAYER_ONE ? match.getPlayerOne() : match.getPlayerTwo());
+                    LOGGER.info("Match {} finished with winner {}.", match.getId(), winner);
                 });
     }
 

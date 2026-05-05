@@ -59,7 +59,7 @@ public class GameInvite {
         this.recipient = recipient;
         this.recipientEmail = recipient.getEmail();
         this.token = token;
-        this.status = GameInviteStatus.PENDING;
+        this.status = GameInviteStatus.INVITED;
     }
 
     @PrePersist

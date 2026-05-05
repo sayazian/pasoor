@@ -1,7 +1,7 @@
 package com.pasoor.invite;
 
 public enum GameInviteStatus {
-    PENDING,
+    INVITED,
     ACCEPTED,
-    EXPIRED
+    DECLINED
 }

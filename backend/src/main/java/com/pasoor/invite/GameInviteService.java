@@ -2,7 +2,6 @@ package com.pasoor.invite;
 
 import com.pasoor.friend.FriendshipRepository;
 import com.pasoor.match.MatchRepository;
-import com.pasoor.match.MatchResponse;
 import com.pasoor.match.MatchService;
 import com.pasoor.match.MatchStatus;
 import com.pasoor.match.PasoorMatch;
@@ -10,7 +9,6 @@ import com.pasoor.user.User;
 import com.pasoor.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -32,22 +31,19 @@ public class GameInviteService {
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
     private final MatchService matchService;
-    private final String frontendUrl;
 
     public GameInviteService(
             GameInviteRepository inviteRepository,
             MatchRepository matchRepository,
             UserRepository userRepository,
             FriendshipRepository friendshipRepository,
-            MatchService matchService,
-            @Value("${app.frontend-url}") String frontendUrl
+            MatchService matchService
     ) {
         this.inviteRepository = inviteRepository;
         this.matchRepository = matchRepository;
         this.userRepository = userRepository;
         this.friendshipRepository = friendshipRepository;
         this.matchService = matchService;
-        this.frontendUrl = frontendUrl;
     }
 
     @Transactional
@@ -60,6 +56,9 @@ public class GameInviteService {
         }
         if (!friendshipRepository.existsAcceptedBetweenUsers(sender.getId(), recipient.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only invite accepted friends.");
+        }
+        if (!recipient.isOnline(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Friend must be online to receive a game invite.");
         }
 
         PasoorMatch match = matchRepository.findById(matchId)
@@ -76,20 +75,31 @@ public class GameInviteService {
 
         match.setStatus(MatchStatus.WAITING);
         GameInvite invite = inviteRepository.save(new GameInvite(match, sender, recipient, token()));
-        String inviteLink = inviteLink(invite.getToken());
-        LOGGER.info("Pasoor invite for {}: {}", recipient.getEmail(), inviteLink);
+        LOGGER.info("Match {} moved to WAITING after invite {} was created.", match.getId(), invite.getId());
 
-        return GameInviteResponse.from(invite, inviteLink, matchService.responseFor(match, sender));
+        return GameInviteResponse.from(invite, matchService.responseFor(match, sender));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public GameInviteListResponse liveInvites(User recipient) {
+        List<GameInviteResponse> liveInvites = inviteRepository
+                .findByRecipientIdAndStatusOrderByCreatedAtDesc(recipient.getId(), GameInviteStatus.INVITED)
+                .stream()
+                .filter(invite -> invite.getMatch().getStatus() == MatchStatus.WAITING)
+                .map(invite -> GameInviteResponse.from(invite, matchService.responseFor(invite.getMatch(), recipient)))
+                .toList();
+
+        return new GameInviteListResponse(liveInvites);
+    }
+
+    @Transactional
     public GameInviteResponse getInvite(User user, String token) {
         GameInvite invite = inviteByToken(token);
         if (!invite.getRecipient().getId().equals(user.getId()) && !invite.getSender().getId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot view this invite.");
         }
 
-        return GameInviteResponse.from(invite, inviteLink(invite.getToken()), matchService.responseFor(invite.getMatch(), user));
+        return GameInviteResponse.from(invite, matchService.responseFor(invite.getMatch(), user));
     }
 
     @Transactional
@@ -98,8 +108,8 @@ public class GameInviteService {
         if (!invite.getRecipient().getId().equals(recipient.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the invited friend can accept this invite.");
         }
-        if (invite.getStatus() != GameInviteStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invite is not pending.");
+        if (invite.getStatus() != GameInviteStatus.INVITED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invite is " + invite.getStatus().name().toLowerCase(Locale.ROOT) + ".");
         }
 
         PasoorMatch match = invite.getMatch();
@@ -111,17 +121,34 @@ public class GameInviteService {
         invite.setAcceptedAt(Instant.now());
         match.setPlayerTwo(recipient);
         match.setStatus(MatchStatus.ACTIVE);
+        LOGGER.info("Invite {} accepted; match {} is ACTIVE with playerTwo {}.", invite.getId(), match.getId(), recipient.getId());
 
-        return GameInviteResponse.from(invite, inviteLink(invite.getToken()), matchService.responseFor(match, recipient));
+        return GameInviteResponse.from(invite, matchService.responseFor(match, recipient));
+    }
+
+    @Transactional
+    public GameInviteResponse declineInvite(User recipient, String token) {
+        GameInvite invite = inviteByToken(token);
+        if (!invite.getRecipient().getId().equals(recipient.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the invited friend can decline this invite.");
+        }
+        if (invite.getStatus() != GameInviteStatus.INVITED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invite is " + invite.getStatus().name().toLowerCase(Locale.ROOT) + ".");
+        }
+
+        PasoorMatch match = invite.getMatch();
+        invite.setStatus(GameInviteStatus.DECLINED);
+        if (match.getStatus() == MatchStatus.WAITING && match.getPlayerTwo() == null) {
+            match.setStatus(MatchStatus.ABANDONED);
+        }
+        LOGGER.info("Invite {} declined; match {} is ABANDONED.", invite.getId(), match.getId());
+
+        return GameInviteResponse.from(invite, matchService.responseFor(match, recipient));
     }
 
     private GameInvite inviteByToken(String token) {
         return inviteRepository.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found."));
-    }
-
-    private String inviteLink(String token) {
-        return frontendUrl + "/invite/" + token;
     }
 
     private String normalizeEmail(String email) {

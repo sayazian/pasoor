@@ -31,6 +31,11 @@ public class GameInvitesController {
         return inviteService.createInvite(currentUser(principal), matchId, request);
     }
 
+    @GetMapping("/api/invites")
+    public GameInviteListResponse listInvites(@AuthenticationPrincipal OAuth2User principal) {
+        return inviteService.liveInvites(currentUser(principal));
+    }
+
     @GetMapping("/api/invites/{token}")
     public GameInviteResponse getInvite(@AuthenticationPrincipal OAuth2User principal, @PathVariable String token) {
         return inviteService.getInvite(currentUser(principal), token);
@@ -39,6 +44,11 @@ public class GameInvitesController {
     @PostMapping("/api/invites/{token}/accept")
     public GameInviteResponse acceptInvite(@AuthenticationPrincipal OAuth2User principal, @PathVariable String token) {
         return inviteService.acceptInvite(currentUser(principal), token);
+    }
+
+    @PostMapping("/api/invites/{token}/decline")
+    public GameInviteResponse declineInvite(@AuthenticationPrincipal OAuth2User principal, @PathVariable String token) {
+        return inviteService.declineInvite(currentUser(principal), token);
     }
 
     private User currentUser(OAuth2User principal) {

@@ -95,4 +95,18 @@ describe('theme stylesheet buttons', () => {
     expect(screen.getByDisplayValue('Want to play?')).toBeInTheDocument();
     expect(screen.getByDisplayValue('http://localhost:5173/invite/token')).toBeInTheDocument();
   });
+
+  it('uses card ink for theme option labels in dark themes', () => {
+    render(
+      <div className="theme-dark-card-room">
+        <label className="theme-option theme-preview-dark-card-room">
+          <input type="radio" name="theme" />
+          <span className="theme-swatch" aria-hidden="true" />
+          <span>Dark Card Room</span>
+        </label>
+      </div>
+    );
+
+    expect(screen.getByText('Dark Card Room').closest('label')).toHaveClass('theme-option');
+  });
 });

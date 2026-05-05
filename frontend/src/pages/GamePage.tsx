@@ -9,8 +9,8 @@ export default function GamePage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const inviteLink = typeof location.state === 'object' && location.state !== null && 'inviteLink' in location.state
-    ? String(location.state.inviteLink)
+  const inviteToken = typeof location.state === 'object' && location.state !== null && 'inviteToken' in location.state
+    ? String(location.state.inviteToken)
     : null;
   const [match, setMatch] = useState<MatchState | null>(null);
   const [selectedTableCards, setSelectedTableCards] = useState<string[]>([]);
@@ -126,7 +126,10 @@ export default function GamePage() {
     if (!match) {
       return;
     }
-    await run(() => exitMatch(match.id));
+    const exitedMatch = await run(() => exitMatch(match.id));
+    if (exitedMatch) {
+      navigate('/dashboard');
+    }
   }
 
   function handleToggleTableCard(cardId: string) {
@@ -160,12 +163,30 @@ export default function GamePage() {
         <section className="game-load-error waiting-panel">
           <p className="eyebrow">Pasoor</p>
           <h1>Waiting for friend</h1>
-          <p className="muted-text">Share this invite link with your friend. The match starts when they accept.</p>
-          {inviteLink && <input aria-label="Invite link" readOnly value={inviteLink} />}
+          <p className="muted-text">Your friend has been invited. The match starts when they accept.</p>
+          {error && <p className="error-message">{error}</p>}
           <button type="button" onClick={() => run(() => getMatch(match.id))}>
             Check again
           </button>
           <Link to="/friends">Friends</Link>
+        </section>
+      </main>
+    );
+  }
+
+  if (match.status === 'ABANDONED') {
+    return (
+      <main className="app-shell">
+        <section className="game-load-error waiting-panel">
+          <p className="eyebrow">Pasoor</p>
+          <h1>Match ended</h1>
+          <p className="error-message">
+            {inviteToken ? 'Your friend denied the game invite.' : 'This match was exited.'}
+          </p>
+          <div className="profile-actions">
+            <Link className="secondary-action-button" to="/dashboard">Dashboard</Link>
+            <Link className="secondary-action-button" to="/friends">Friends</Link>
+          </div>
         </section>
       </main>
     );

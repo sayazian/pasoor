@@ -249,6 +249,11 @@ a {
   width: 100%;
 }
 
+.dashboard-invites {
+  display: grid;
+  gap: 10px;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -307,10 +312,12 @@ a {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  color: var(--color-card-ink);
   cursor: pointer;
   display: grid;
   gap: 10px;
   grid-template-columns: auto 40px 1fr;
+  font-weight: 800;
   min-height: 50px;
   padding: 10px 12px;
 }
@@ -457,6 +464,36 @@ a {
   background: var(--theme-secondary-button-bg);
   border: var(--theme-secondary-button-border);
   color: var(--theme-secondary-button-color);
+}
+
+.offline-label {
+  align-items: center;
+  color: var(--color-muted);
+  display: inline-flex;
+  font-weight: 800;
+  min-height: 34px;
+}
+
+.invite-modal-backdrop {
+  background: rgba(0, 0, 0, 0.42);
+  display: grid;
+  inset: 0;
+  padding: 20px;
+  place-items: center;
+  position: fixed;
+  z-index: 20;
+}
+
+.invite-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+  display: grid;
+  gap: 14px;
+  max-width: 440px;
+  padding: 24px;
+  width: min(100%, 440px);
 }
 
 .game {

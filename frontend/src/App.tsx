@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { getCurrentUser, googleLoginUrl, logout, updateProfile } from './api/authApi';
+import { acceptInvite, declineInvite, getLiveInvites } from './api/matchesApi';
 import FriendsPage from './pages/FriendsPage';
 import GamePage from './pages/GamePage';
-import InvitePage from './pages/InvitePage';
 import type { CurrentUser, PreferredTheme } from './types/auth';
+import type { GameInvite } from './types/invite';
 
 type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
 
@@ -84,15 +85,12 @@ export default function App() {
           />
           <Route
             path="/invite/:token"
-            element={
-              <ProtectedRoute authStatus={authStatus}>
-                <InvitePage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/dashboard" replace />}
           />
           <Route path="/" element={<HomeRoute authStatus={authStatus} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        {authStatus === 'authenticated' && <LiveInvitePopup />}
       </BrowserRouter>
     </div>
   );
@@ -163,6 +161,90 @@ function DashboardPage({ currentUser, onLogout }: { currentUser: CurrentUser; on
         </nav>
       </section>
     </main>
+  );
+}
+
+function LiveInvitePopup() {
+  const navigate = useNavigate();
+  const [liveInvite, setLiveInvite] = useState<GameInvite | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshInvites() {
+      try {
+        const response = await getLiveInvites();
+        if (!cancelled) {
+          const invites = Array.isArray(response.liveInvites) ? response.liveInvites : [];
+          setLiveInvite((currentInvite) => currentInvite ?? invites[0] ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setLiveInvite(null);
+        }
+      }
+    }
+
+    refreshInvites();
+    const intervalId = window.setInterval(refreshInvites, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  async function handleAcceptInvite() {
+    if (!liveInvite) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const acceptedInvite = await acceptInvite(liveInvite.token);
+      setLiveInvite(null);
+      navigate(`/game/${acceptedInvite.match.id}`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Invite could not be accepted.');
+    }
+  }
+
+  async function handleDeclineInvite() {
+    if (!liveInvite) {
+      return;
+    }
+
+    try {
+      setError(null);
+      await declineInvite(liveInvite.token);
+      setLiveInvite(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Invite could not be declined.');
+    }
+  }
+
+  if (!liveInvite) {
+    return null;
+  }
+
+  return (
+    <div className="invite-modal-backdrop" role="presentation">
+      <section className="invite-modal" role="dialog" aria-modal="true" aria-labelledby="live-invite-title">
+        <p className="eyebrow">Game invite</p>
+        <h2 id="live-invite-title">{liveInvite.sender.name} invited you</h2>
+        <p className="muted-text">Join this Pasoor match now?</p>
+        {error && <p className="error-message">{error}</p>}
+        <div className="profile-actions">
+          <button type="button" onClick={handleDeclineInvite}>
+            Deny
+          </button>
+          <button type="button" onClick={handleAcceptInvite}>
+            Accept
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 

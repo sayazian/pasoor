@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -28,6 +29,7 @@ public class FriendshipService {
 
     @Transactional(readOnly = true)
     public FriendsResponse friendsFor(User currentUser) {
+        Instant now = Instant.now();
         List<Friendship> friendships = friendshipRepository.findByRequesterIdOrRecipientId(
                 currentUser.getId(),
                 currentUser.getId()
@@ -35,7 +37,7 @@ public class FriendshipService {
 
         List<FriendSummary> friends = friendships.stream()
                 .filter(friendship -> friendship.getStatus() == FriendshipStatus.ACCEPTED)
-                .map(friendship -> FriendSummary.from(otherUser(friendship, currentUser)))
+                .map(friendship -> FriendSummary.from(otherUser(friendship, currentUser), now))
                 .sorted(Comparator.comparing(FriendSummary::name, String.CASE_INSENSITIVE_ORDER))
                 .toList();
 

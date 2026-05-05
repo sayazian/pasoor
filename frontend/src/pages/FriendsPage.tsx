@@ -24,9 +24,9 @@ export default function FriendsPage() {
     let cancelled = false;
 
     getFriends()
-      .then((response) => {
+      .then((friendsResponse) => {
         if (!cancelled) {
-          setFriends(response);
+          setFriends(friendsResponse);
           setStatus('idle');
         }
       })
@@ -75,7 +75,7 @@ export default function FriendsPage() {
     try {
       const match = await createMatch();
       const invite = await inviteFriendToMatch(match.id, friend.email);
-      navigate(`/game/${invite.match.id}`, { state: { inviteLink: invite.inviteLink } });
+      navigate(`/game/${invite.match.id}`, { state: { inviteToken: invite.token } });
     } catch (caught) {
       setError(getFriendlyError(caught, 'Friend could not be invited.'));
       setStatus('idle');
@@ -124,9 +124,13 @@ export default function FriendsPage() {
           friends={friends.friends}
           emptyLabel="No friends yet"
           actions={(friend) => (
-            <button type="button" onClick={() => handleInviteFriend(friend)} disabled={status === 'saving'}>
-              Invite to game
-            </button>
+            friend.online ? (
+              <button type="button" onClick={() => handleInviteFriend(friend)} disabled={status === 'saving'}>
+                Invite to game
+              </button>
+            ) : (
+              <span className="offline-label">Offline</span>
+            )
           )}
         />
         <RequestList
@@ -169,7 +173,9 @@ function getFriendlyError(caught: unknown, fallback: string): string {
     }
 
     if (caught.status === 409) {
-      return 'A pending or accepted friendship already exists for that email.';
+      return caught.message.includes('online')
+        ? 'Your friend must be online to receive a game invite.'
+        : 'A pending or accepted friendship already exists for that email.';
     }
   }
 
@@ -199,6 +205,7 @@ function FriendList({
               <div>
                 <strong>{friend.name}</strong>
                 <span>{friend.email}</span>
+                <p>{friend.online ? 'Online' : 'Offline'}</p>
               </div>
               {actions && <div className="request-actions">{actions(friend)}</div>}
             </li>
