@@ -18,7 +18,8 @@ export default function TableRow({
   onToggleCard,
   onCapture
 }: TableRowProps) {
-  const canChooseCapture = pendingCaptureCardId !== null;
+  const hasPendingCapture = pendingCaptureCardId !== null;
+  const canChooseCapture = hasPendingCapture && pendingCapturePlayer === 'ME';
 
   return (
     <section className="table-row">
@@ -31,6 +32,8 @@ export default function TableRow({
               Capture
             </button>
           </div>
+        ) : hasPendingCapture ? (
+          <span>Opponent choosing capture</span>
         ) : (
           <span>Drop a card first</span>
         )}

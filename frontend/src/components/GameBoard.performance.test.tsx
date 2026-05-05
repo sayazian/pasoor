@@ -75,6 +75,38 @@ describe('GameBoard performance-oriented rendering', () => {
     expect(onPlayCard).not.toHaveBeenCalled();
   });
 
+  it('does not show capture controls for opponent pending capture', () => {
+    const onToggleTableCard = vi.fn();
+    const onCapture = vi.fn();
+
+    render(
+      <GameBoard
+        game={{
+          ...gameStateWithLargeTable(0),
+          tableCards: [card('PENDING-FIVE', 'CLUBS', 'FIVE'), card('TABLE-EIGHT', 'HEARTS', 'EIGHT')],
+          pendingCapturePlayer: 'OPPONENT',
+          pendingCaptureCard: card('PENDING-FIVE', 'CLUBS', 'FIVE')
+        }}
+        selectedTableCards={[]}
+        error={null}
+        onDeal={vi.fn()}
+        onPlayCard={vi.fn()}
+        onToggleTableCard={onToggleTableCard}
+        onCapture={onCapture}
+        onNewGame={vi.fn()}
+      />
+    );
+
+    const tableCard = screen.getByRole('button', { name: /8 of hearts/i });
+
+    expect(screen.queryByRole('button', { name: /^capture$/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Opponent choosing capture')).toBeInTheDocument();
+    expect(tableCard).toHaveAttribute('aria-disabled', 'true');
+    tableCard.click();
+    expect(onToggleTableCard).not.toHaveBeenCalled();
+    expect(onCapture).not.toHaveBeenCalled();
+  });
+
   it('keeps disabled face-up black cards readable', () => {
     render(
       <GameBoard

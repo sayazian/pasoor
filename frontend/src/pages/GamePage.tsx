@@ -105,6 +105,10 @@ export default function GamePage() {
       setError('Drop a card before capturing.');
       return;
     }
+    if (game.pendingCapturePlayer !== 'ME') {
+      setError('Wait for your opponent to finish capturing.');
+      return;
+    }
     if (selectedTableCards.length === 0) {
       setError('Select at least one table card to capture.');
       return;
