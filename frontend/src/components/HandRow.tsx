@@ -5,24 +5,30 @@ interface HandRowProps {
   title: string;
   player: Player;
   cards: CardType[];
+  cardCount?: number;
   currentTurn: Player;
   faceDown?: boolean;
   disabled?: boolean;
-  onPlayCard: (player: Player, cardId: string) => void;
+  onPlayCard?: (player: Player, cardId: string) => void;
 }
 
-export default function HandRow({ title, player, cards, currentTurn, faceDown, disabled, onPlayCard }: HandRowProps) {
-  const isTurn = currentTurn === player && !disabled;
+export default function HandRow({ title, player, cards, cardCount, currentTurn, faceDown, disabled, onPlayCard }: HandRowProps) {
+  const visibleCount = cardCount ?? cards.length;
+  const isTurn = currentTurn === player && !disabled && Boolean(onPlayCard);
 
   return (
     <section className="hand-row">
       <div className="row-heading">
         <h2>{title}</h2>
-        <span>{cards.length} cards</span>
+        <span>{visibleCount} cards</span>
       </div>
       <div className="cards-row">
-        {cards.length === 0 ? (
+        {visibleCount === 0 ? (
           <p className="empty-label">Empty</p>
+        ) : faceDown ? (
+          Array.from({ length: visibleCount }, (_, index) => (
+            <Card key={`${title}-${index}`} faceDown disabled />
+          ))
         ) : (
           cards.map((card) => (
             <Card
@@ -30,7 +36,7 @@ export default function HandRow({ title, player, cards, currentTurn, faceDown, d
               card={card}
               faceDown={faceDown}
               disabled={!isTurn}
-              onClick={() => onPlayCard(player, card.id)}
+              onClick={() => onPlayCard?.(player, card.id)}
             />
           ))
         )}

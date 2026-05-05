@@ -33,6 +33,7 @@ const rankLabels = {
 
 export default function Card({ card, faceDown, selected, disabled, onClick }: CardProps) {
   const isRed = card?.suit === 'DIAMONDS' || card?.suit === 'HEARTS';
+  const nativeDisabled = disabled && (faceDown || !card);
 
   return (
     <button
@@ -44,8 +45,9 @@ export default function Card({ card, faceDown, selected, disabled, onClick }: Ca
         isRed ? 'red-card' : ''
       ].join(' ')}
       type="button"
-      disabled={disabled}
-      onClick={onClick}
+      disabled={nativeDisabled}
+      aria-disabled={disabled}
+      onClick={disabled ? undefined : onClick}
       aria-label={faceDown || !card ? 'Face-down card' : `${rankLabels[card.rank]} of ${card.suit.toLowerCase()}`}
     >
       {faceDown || !card ? null : (

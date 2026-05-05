@@ -1,18 +1,16 @@
 package com.pasoor.match;
 
-import com.pasoor.game.GameState;
-
 import java.util.UUID;
 
 public record RoundResponse(
         UUID id,
         int roundNumber,
         RoundStatus status,
-        GameState gameState,
+        VisibleGameState gameState,
         Integer playerOneRoundScore,
         Integer playerTwoRoundScore
 ) {
-    static RoundResponse from(GameRound round, GameState gameState) {
+    static RoundResponse from(GameRound round, VisibleGameState gameState) {
         return new RoundResponse(
                 round.getId(),
                 round.getRoundNumber(),

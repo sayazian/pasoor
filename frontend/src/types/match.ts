@@ -3,6 +3,7 @@ import type { GameState } from './game';
 export type MatchStatus = 'WAITING' | 'ACTIVE' | 'FINISHED' | 'ABANDONED';
 export type RoundStatus = 'ACTIVE' | 'FINISHED';
 export type MatchWinner = 'PLAYER_ONE' | 'PLAYER_TWO';
+export type MatchPlayerSide = 'PLAYER_ONE' | 'PLAYER_TWO';
 
 export interface MatchPlayer {
   id: string;
@@ -25,6 +26,7 @@ export interface MatchState {
   status: MatchStatus;
   playerOne: MatchPlayer;
   playerTwo: MatchPlayer | null;
+  viewerSide: MatchPlayerSide;
   playerOneTotalScore: number;
   playerTwoTotalScore: number;
   winnerSide: MatchWinner | null;

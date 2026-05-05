@@ -67,6 +67,12 @@ POST /api/invites/{token}/accept
 
 Invites are only allowed for accepted friends. Creating an invite moves the match to `WAITING`; accepting the invite sets `playerTwo` and returns the match to `ACTIVE`.
 
+### Two-Player Visibility
+
+Phase 7 makes match game state viewer-specific. Match responses include `viewerSide`, return the authenticated player's cards in `currentRound.gameState.myHand`, and return only `opponentHandCount` for the other player's hand. Opponent card identities are not returned by match APIs.
+
+For match play and capture actions, a user can only act as their own match side, and turn validation remains owned by the backend game service. The frontend renders opponent cards as disabled backs and polls the match while it is active or waiting.
+
 ### Commands
 
 ```bash

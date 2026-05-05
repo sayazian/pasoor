@@ -9,18 +9,20 @@ public record MatchResponse(
         MatchStatus status,
         FriendSummary playerOne,
         FriendSummary playerTwo,
+        MatchPlayerSide viewerSide,
         int playerOneTotalScore,
         int playerTwoTotalScore,
         MatchWinner winnerSide,
         FriendSummary winner,
         RoundResponse currentRound
 ) {
-    public static MatchResponse from(PasoorMatch match, RoundResponse currentRound) {
+    public static MatchResponse from(PasoorMatch match, MatchPlayerSide viewerSide, RoundResponse currentRound) {
         return new MatchResponse(
                 match.getId(),
                 match.getStatus(),
                 FriendSummary.from(match.getPlayerOne()),
                 match.getPlayerTwo() == null ? null : FriendSummary.from(match.getPlayerTwo()),
+                viewerSide,
                 match.getPlayerOneTotalScore(),
                 match.getPlayerTwoTotalScore(),
                 match.getWinnerSide(),

@@ -79,7 +79,7 @@ public class GameInviteService {
         String inviteLink = inviteLink(invite.getToken());
         LOGGER.info("Pasoor invite for {}: {}", recipient.getEmail(), inviteLink);
 
-        return GameInviteResponse.from(invite, inviteLink, matchService.responseFor(match));
+        return GameInviteResponse.from(invite, inviteLink, matchService.responseFor(match, sender));
     }
 
     @Transactional(readOnly = true)
@@ -89,7 +89,7 @@ public class GameInviteService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot view this invite.");
         }
 
-        return GameInviteResponse.from(invite, inviteLink(invite.getToken()), matchService.responseFor(invite.getMatch()));
+        return GameInviteResponse.from(invite, inviteLink(invite.getToken()), matchService.responseFor(invite.getMatch(), user));
     }
 
     @Transactional
@@ -112,7 +112,7 @@ public class GameInviteService {
         match.setPlayerTwo(recipient);
         match.setStatus(MatchStatus.ACTIVE);
 
-        return GameInviteResponse.from(invite, inviteLink(invite.getToken()), matchService.responseFor(match));
+        return GameInviteResponse.from(invite, inviteLink(invite.getToken()), matchService.responseFor(match, recipient));
     }
 
     private GameInvite inviteByToken(String token) {

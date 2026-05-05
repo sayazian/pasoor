@@ -7,6 +7,7 @@ import com.pasoor.game.GamePhase;
 import com.pasoor.game.GameService;
 import com.pasoor.game.GameState;
 import com.pasoor.game.PlayCardRequest;
+import com.pasoor.game.Player;
 import com.pasoor.game.Score;
 import com.pasoor.user.User;
 import org.springframework.http.HttpStatus;
@@ -43,7 +44,7 @@ public class MatchService {
         PasoorMatch match = matchRepository.save(new PasoorMatch(playerOne));
         GameRound round = roundRepository.save(new GameRound(match, 1, writeGameState(gameService.createGame())));
 
-        return response(match, round);
+        return response(match, round, playerOne);
     }
 
     @Transactional(readOnly = true)
@@ -51,14 +52,14 @@ public class MatchService {
         PasoorMatch match = ownedMatch(user, matchId);
         GameRound round = currentRound(match);
 
-        return response(match, round);
+        return response(match, round, user);
     }
 
     @Transactional
     public MatchResponse exitMatch(User user, UUID matchId) {
         PasoorMatch match = ownedMatch(user, matchId);
         match.setStatus(MatchStatus.ABANDONED);
-        return response(match, currentRound(match));
+        return response(match, currentRound(match), user);
     }
 
     @Transactional
@@ -68,12 +69,19 @@ public class MatchService {
 
     @Transactional
     public MatchResponse play(User user, UUID matchId, UUID roundId, PlayCardRequest request) {
-        return updateActiveRound(user, matchId, roundId, state -> gameService.playCard(state, request));
+        PasoorMatch match = ownedMatch(user, matchId);
+        PlayCardRequest canonicalRequest = new PlayCardRequest(canonicalRequestPlayer(match, user, request.player()), request.cardId());
+        return updateActiveRound(user, matchId, roundId, state -> gameService.playCard(state, canonicalRequest));
     }
 
     @Transactional
     public MatchResponse capture(User user, UUID matchId, UUID roundId, CaptureCardsRequest request) {
-        return updateActiveRound(user, matchId, roundId, state -> gameService.captureCards(state, request));
+        PasoorMatch match = ownedMatch(user, matchId);
+        CaptureCardsRequest canonicalRequest = new CaptureCardsRequest(
+                canonicalRequestPlayer(match, user, request.player()),
+                request.capturedTableCardIds()
+        );
+        return updateActiveRound(user, matchId, roundId, state -> gameService.captureCards(state, canonicalRequest));
     }
 
     private MatchResponse updateActiveRound(User user, UUID matchId, UUID roundId, RoundAction action) {
@@ -99,11 +107,19 @@ public class MatchService {
                         round.getRoundNumber() + 1,
                         writeGameState(gameService.createGame())
                 ));
-                return response(match, nextRound);
+                return response(match, nextRound, user);
             }
         }
 
-        return response(match, round);
+        return response(match, round, user);
+    }
+
+    private Player canonicalRequestPlayer(PasoorMatch match, User user, Player requestedPlayer) {
+        if (requestedPlayer != Player.ME) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot act for the other player.");
+        }
+
+        return canonicalPlayer(match, user);
     }
 
     private void finishRound(PasoorMatch match, GameRound round, GameState state) {
@@ -157,12 +173,29 @@ public class MatchService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Round not found."));
     }
 
-    private MatchResponse response(PasoorMatch match, GameRound round) {
-        return MatchResponse.from(match, RoundResponse.from(round, readGameState(round)));
+    private MatchResponse response(PasoorMatch match, GameRound round, User viewer) {
+        com.pasoor.game.Player viewerPlayer = canonicalPlayer(match, viewer);
+        return MatchResponse.from(
+                match,
+                viewerSide(match, viewer),
+                RoundResponse.from(round, VisibleGameState.from(readGameState(round), viewerPlayer))
+        );
     }
 
-    public MatchResponse responseFor(PasoorMatch match) {
-        return response(match, currentRound(match));
+    public MatchResponse responseFor(PasoorMatch match, User viewer) {
+        return response(match, currentRound(match), viewer);
+    }
+
+    private Player canonicalPlayer(PasoorMatch match, User user) {
+        return match.getPlayerOne().getId().equals(user.getId())
+                ? Player.ME
+                : Player.OPPONENT;
+    }
+
+    private MatchPlayerSide viewerSide(PasoorMatch match, User user) {
+        return match.getPlayerOne().getId().equals(user.getId())
+                ? MatchPlayerSide.PLAYER_ONE
+                : MatchPlayerSide.PLAYER_TWO;
     }
 
     private GameState readGameState(GameRound round) {

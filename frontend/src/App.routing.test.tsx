@@ -37,6 +37,7 @@ const newMatchState: MatchState = {
   status: 'ACTIVE',
   playerOne: currentUser,
   playerTwo: null,
+  viewerSide: 'PLAYER_ONE',
   playerOneTotalScore: 0,
   playerTwoTotalScore: 0,
   winnerSide: null,
@@ -65,12 +66,8 @@ const dealtMatchState: MatchState = {
         { id: 'CLUBS-FOUR', suit: 'CLUBS', rank: 'FOUR', value: 4 },
         { id: 'CLUBS-FIVE', suit: 'CLUBS', rank: 'FIVE', value: 5 }
       ],
-      opponentHand: [
-        { id: 'DIAMONDS-TWO', suit: 'DIAMONDS', rank: 'TWO', value: 2 },
-        { id: 'DIAMONDS-THREE', suit: 'DIAMONDS', rank: 'THREE', value: 3 },
-        { id: 'DIAMONDS-FOUR', suit: 'DIAMONDS', rank: 'FOUR', value: 4 },
-        { id: 'DIAMONDS-FIVE', suit: 'DIAMONDS', rank: 'FIVE', value: 5 }
-      ],
+      opponentHand: [],
+      opponentHandCount: 4,
       tableCards: [
         { id: 'HEARTS-TWO', suit: 'HEARTS', rank: 'TWO', value: 2 },
         { id: 'HEARTS-THREE', suit: 'HEARTS', rank: 'THREE', value: 3 },
@@ -193,6 +190,7 @@ describe('App routing', () => {
     render(<App />);
 
     expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByText('My turn')).toBeInTheDocument();
     expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Round');
     expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Me0');

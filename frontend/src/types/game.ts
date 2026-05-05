@@ -28,6 +28,7 @@ export interface GameState {
   deckCount: number;
   myHand: Card[];
   opponentHand: Card[];
+  opponentHandCount?: number;
   tableCards: Card[];
   myCollectedPile: Card[];
   opponentCollectedPile: Card[];

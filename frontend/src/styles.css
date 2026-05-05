@@ -13,6 +13,7 @@
   --color-secondary: #425f7b;
   --color-accent: #d9a21b;
   --color-card: #fffdf7;
+  --color-card-ink: #17211b;
   --color-card-border: #bac6bd;
   --color-card-back: #245748;
   --color-card-back-border: #173f35;
@@ -28,6 +29,9 @@
   --theme-button-bg: #093f27;
   --theme-button-border: 2px solid #d8a338;
   --theme-button-color: #fff4c6;
+  --theme-secondary-button-bg: #fff4c6;
+  --theme-secondary-button-border: 1px solid #d8a338;
+  --theme-secondary-button-color: #173f35;
   background: var(--color-page);
   color: var(--color-text);
   min-height: 100vh;
@@ -43,6 +47,7 @@
   --color-secondary: #566b7a;
   --color-accent: #f2b84b;
   --color-card: #fffefa;
+  --color-card-ink: #17202a;
   --color-card-border: #c8d4dc;
   --color-card-back: #2c6f87;
   --color-card-back-border: #1f5d76;
@@ -55,6 +60,9 @@
   --theme-button-bg: #23445f;
   --theme-button-border: 0;
   --theme-button-color: #fff;
+  --theme-secondary-button-bg: #edf3f6;
+  --theme-secondary-button-border: 1px solid #9cb5c4;
+  --theme-secondary-button-color: #23445f;
   --back-pattern: url("/assets/themes/modern-card-back.svg") center / cover;
   --page-border: none;
 }
@@ -69,6 +77,7 @@
   --color-secondary: #4f667d;
   --color-accent: #c48b2c;
   --color-card: #fffaf0;
+  --color-card-ink: #14242a;
   --color-card-border: #9dc6c0;
   --color-card-back: #087f87;
   --color-card-back-border: #c48b2c;
@@ -84,6 +93,9 @@
   --theme-button-bg: #077178;
   --theme-button-border: 2px solid #c48b2c;
   --theme-button-color: #fff8e9;
+  --theme-secondary-button-bg: #fff8e9;
+  --theme-secondary-button-border: 2px solid #c48b2c;
+  --theme-secondary-button-color: #075f66;
   --back-pattern: url("/assets/themes/persian-card-back.svg") center / cover;
   --page-border: url("/assets/themes/persian-page-border.svg") 32 round;
 }
@@ -98,6 +110,7 @@
   --color-secondary: #6f8390;
   --color-accent: #e0b75a;
   --color-card: #f8f1de;
+  --color-card-ink: #17211b;
   --color-card-border: #4b5658;
   --color-card-back: #2d4c4f;
   --color-card-back-border: #c99a3e;
@@ -111,6 +124,9 @@
   --theme-button-bg: #173b27;
   --theme-button-border: 1px solid #c99a3e;
   --theme-button-color: #f3d27a;
+  --theme-secondary-button-bg: #2b3130;
+  --theme-secondary-button-border: 1px solid #c99a3e;
+  --theme-secondary-button-color: #f3d27a;
   --back-pattern: url("/assets/themes/dark-card-back.svg") center / cover;
   --page-border: url("/assets/themes/dark-page-border.svg") 24 round;
 }
@@ -210,10 +226,10 @@ a {
 .friend-request-form button,
 .request-actions button {
   align-items: center;
-  background: var(--color-primary);
-  border: 0;
+  background: var(--theme-button-bg);
+  border: var(--theme-button-border);
   border-radius: 8px;
-  color: #fff;
+  color: var(--theme-button-color);
   cursor: pointer;
   display: inline-flex;
   font-weight: 700;
@@ -245,18 +261,33 @@ a {
   font-weight: 800;
 }
 
-.field input {
+.field input,
+.field textarea,
+.waiting-panel input {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  color: var(--color-text);
+  color: var(--color-card-ink);
   font: inherit;
   min-height: 44px;
   padding: 0 12px;
 }
 
 .field input[readonly] {
-  color: var(--color-muted);
+  color: var(--color-card-ink);
+}
+
+.field input::placeholder,
+.field textarea::placeholder,
+.waiting-panel input::placeholder {
+  color: color-mix(in srgb, var(--color-card-ink) 58%, transparent);
+}
+
+.field input::selection,
+.field textarea::selection,
+.waiting-panel input::selection {
+  background: color-mix(in srgb, var(--color-accent) 42%, var(--color-card));
+  color: var(--color-card-ink);
 }
 
 .theme-options {
@@ -334,7 +365,9 @@ a {
 }
 
 .profile-actions a {
-  background: var(--color-secondary);
+  background: var(--theme-secondary-button-bg);
+  border: var(--theme-secondary-button-border);
+  color: var(--theme-secondary-button-color);
 }
 
 .friends-panel {
@@ -360,14 +393,12 @@ a {
 }
 
 .field textarea {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-text);
-  font: inherit;
-  min-height: 44px;
   padding: 10px 12px;
   resize: vertical;
+}
+
+.waiting-panel input {
+  width: 100%;
 }
 
 .friend-request-form button {
@@ -423,7 +454,9 @@ a {
 }
 
 .request-actions button:last-child {
-  background: var(--color-secondary);
+  background: var(--theme-secondary-button-bg);
+  border: var(--theme-secondary-button-border);
+  color: var(--theme-secondary-button-color);
 }
 
 .game {
@@ -466,7 +499,9 @@ h2 {
 .left-status h1 {
   color: var(--theme-title);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 3.3vw, 3rem);
+  font-size: clamp(1.75rem, 2.5vw, 2.65rem);
+  line-height: 0.98;
+  overflow-wrap: anywhere;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
 }
 
@@ -495,12 +530,16 @@ h2 {
   background: var(--theme-button-bg);
   border: var(--theme-button-border);
   color: var(--theme-button-color);
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .secondary-action-button {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
+  background: var(--theme-secondary-button-bg);
+  border: var(--theme-secondary-button-border);
+  color: var(--theme-secondary-button-color);
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .match-summary {
@@ -550,30 +589,19 @@ h2 {
 }
 
 .game-load-error button {
-  background: var(--color-primary);
-  border: 0;
+  background: var(--theme-button-bg);
+  border: var(--theme-button-border);
   border-radius: 8px;
-  color: #fff;
+  color: var(--theme-button-color);
   cursor: pointer;
   justify-self: start;
   min-height: 42px;
   padding: 0 18px;
 }
 
-.waiting-panel input {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-text);
-  font: inherit;
-  min-height: 44px;
-  padding: 0 12px;
-  width: 100%;
-}
-
 .board {
   display: grid;
-  grid-template-columns: minmax(130px, 0.7fr) minmax(520px, 3fr) minmax(160px, 0.9fr);
+  grid-template-columns: minmax(220px, 0.8fr) minmax(520px, 3fr) minmax(160px, 0.9fr);
   gap: 18px;
   min-height: 650px;
 }
@@ -593,6 +621,7 @@ h2 {
 .left-column {
   align-content: center;
   justify-items: stretch;
+  overflow: hidden;
 }
 
 .left-status {
@@ -659,7 +688,7 @@ h2 {
   border: 1px solid var(--color-card-border);
   border-radius: 8px;
   box-shadow: var(--shadow-card);
-  color: var(--color-text);
+  color: var(--color-card-ink);
   cursor: pointer;
   display: grid;
   flex: 0 0 auto;
@@ -700,7 +729,21 @@ h2 {
 
 .card.disabled {
   cursor: not-allowed;
-  opacity: 0.48;
+  -webkit-text-fill-color: currentColor;
+}
+
+.card.disabled:not(.card-back) {
+  background: color-mix(in srgb, var(--color-card) 92%, var(--panel-bg));
+  color: var(--color-card-ink);
+  filter: saturate(0.92);
+}
+
+.card.disabled.red-card {
+  color: #b82132;
+}
+
+.card-back.disabled {
+  opacity: 0.58;
 }
 
 .deck-wrap,
@@ -733,7 +776,6 @@ h2 {
 }
 
 .collect-actions button {
-  background: var(--color-secondary);
   min-height: 34px;
   padding: 0 12px;
 }
@@ -795,7 +837,7 @@ h2 {
   padding: 12px 14px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1080px) {
   .app-shell {
     padding: 14px;
   }
@@ -823,6 +865,15 @@ h2 {
   .board {
     grid-template-columns: 1fr;
     min-height: 0;
+  }
+
+  .left-column {
+    align-content: stretch;
+    overflow: visible;
+  }
+
+  .left-status h1 {
+    font-size: clamp(1.65rem, 8vw, 2.5rem);
   }
 
   .right-column,

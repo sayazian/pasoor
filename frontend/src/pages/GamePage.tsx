@@ -44,6 +44,23 @@ export default function GamePage() {
     };
   }, [matchId, navigate]);
 
+  useEffect(() => {
+    if (!match?.id || match.status === 'FINISHED' || match.status === 'ABANDONED') {
+      return;
+    }
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const refreshedMatch = await getMatch(match.id);
+        setMatch(refreshedMatch);
+      } catch {
+        // Keep the last playable state on transient polling failures.
+      }
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [match?.id, match?.status]);
+
   async function run(action: () => Promise<MatchState>) {
     try {
       setError(null);
