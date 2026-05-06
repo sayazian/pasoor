@@ -149,6 +149,41 @@ const nextHandMatchState: MatchState = {
   }
 };
 
+const completedRound = {
+  id: 'finished-round-1',
+  roundNumber: 1,
+  status: 'FINISHED' as const,
+  gameState: {
+    ...newGameState,
+    phase: 'FINISHED' as const,
+    score: {
+      myScore: 12,
+      opponentScore: 8,
+      myClubCount: 10,
+      opponentClubCount: 3,
+      mySurPoints: 0,
+      opponentSurPoints: 0,
+      myCardPoints: 12,
+      opponentCardPoints: 8
+    }
+  },
+  playerOneRoundScore: 12,
+  playerTwoRoundScore: 8,
+  playerOneAcknowledged: false,
+  playerTwoAcknowledged: false
+};
+
+const matchWithUnacknowledgedRound: MatchState = {
+  ...newMatchState,
+  currentRound: {
+    ...newMatchState.currentRound,
+    id: 'round-2',
+    roundNumber: 2
+  },
+  lastCompletedRound: completedRound,
+  completedRounds: [completedRound]
+};
+
 const waitingMatchState: MatchState = {
   ...newMatchState,
   status: 'WAITING'
@@ -284,6 +319,47 @@ describe('App routing', () => {
     });
     expect(screen.getByText('Play a card')).toBeInTheDocument();
     expect(screen.getAllByText('4 cards')).toHaveLength(2);
+  });
+
+  it('dismisses the round score popup immediately when ok is clicked', async () => {
+    window.history.pushState({}, '', `/game/${newMatchState.id}`);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`) && !init?.method) {
+        return Response.json(matchWithUnacknowledgedRound);
+      }
+      if (
+        url.endsWith(`/api/matches/${newMatchState.id}/rounds/${completedRound.id}/acknowledge`) &&
+        init?.method === 'POST'
+      ) {
+        return Response.json(matchWithUnacknowledgedRound);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /game 1 score/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `http://localhost:8080/api/matches/${newMatchState.id}/rounds/${completedRound.id}/acknowledge`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    expect(screen.queryByRole('heading', { name: /game 1 score/i })).not.toBeInTheDocument();
   });
 
   afterEach(() => {

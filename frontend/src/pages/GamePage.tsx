@@ -27,6 +27,7 @@ export default function GamePage() {
   const [selectedTableCards, setSelectedTableCards] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [matchChoiceError, setMatchChoiceError] = useState<string | null>(null);
+  const [dismissedRoundIds, setDismissedRoundIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -172,6 +173,7 @@ export default function GamePage() {
     if (!match) {
       return;
     }
+    setDismissedRoundIds((current) => new Set(current).add(round.id));
     await run(() => acknowledgeRound(match.id, round.id));
   }
 
@@ -276,7 +278,7 @@ export default function GamePage() {
   }
 
   const playerNames = visiblePlayerNames(match);
-  const roundForPopup = match.status === 'ACTIVE' ? unacknowledgedRound(match) : null;
+  const roundForPopup = match.status === 'ACTIVE' ? unacknowledgedRound(match, dismissedRoundIds) : null;
   const matchEndConflict = matchEndConflictMessage(match);
 
   return (
@@ -357,9 +359,12 @@ function StatusDialog({
   );
 }
 
-function unacknowledgedRound(match: MatchState) {
+function unacknowledgedRound(match: MatchState, dismissedRoundIds: Set<string>) {
   const round = match.lastCompletedRound;
   if (!round?.gameState.score) {
+    return null;
+  }
+  if (dismissedRoundIds.has(round.id)) {
     return null;
   }
   if (viewerAcknowledged(match, round)) {
