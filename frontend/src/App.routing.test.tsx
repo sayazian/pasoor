@@ -71,6 +71,23 @@ const newMatchState: MatchState = {
   completedRounds: []
 };
 
+const undealtMatchState: MatchState = {
+  ...newMatchState,
+  currentRound: {
+    ...newMatchState.currentRound,
+    gameState: {
+      ...newGameState,
+      deckCount: 52,
+      myHand: [],
+      opponentHand: [],
+      opponentHandCount: 0,
+      tableCards: [],
+      phase: 'NEW',
+      initialDealDone: false
+    }
+  }
+};
+
 const dealtMatchState: MatchState = {
   ...newMatchState,
   currentRound: {
@@ -152,6 +169,48 @@ describe('App routing', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     window.history.pushState({}, '', '/');
+  });
+
+  it('automatically deals when a match still arrives in the old undealt state', async () => {
+    window.history.pushState({}, '', '/game');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/matches') && init?.method === 'POST') {
+        return Response.json(undealtMatchState);
+      }
+      if (
+        url.endsWith(`/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/deal`) &&
+        init?.method === 'POST'
+      ) {
+        return Response.json(dealtMatchState);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
+        return Response.json(dealtMatchState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText('40')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `http://localhost:8080/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/deal`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    expect(screen.getByText('Play a card')).toBeInTheDocument();
   });
 
   afterEach(() => {

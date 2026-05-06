@@ -6,6 +6,7 @@ import {
   captureMatchCards,
   chooseMatchEnd,
   createMatch,
+  dealMatchRound,
   exitMatch,
   getMatch,
   playMatchCard
@@ -77,6 +78,27 @@ export default function GamePage() {
       navigate(`/game/${match.rematchId}`, { replace: true });
     }
   }, [match?.rematchId, navigate]);
+
+  useEffect(() => {
+    if (!match || match.status !== 'ACTIVE' || match.currentRound.gameState.phase !== 'NEW') {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function dealInitialHand() {
+      const dealtMatch = await run(() => dealMatchRound(match!.id, match!.currentRound.id));
+      if (!cancelled && dealtMatch) {
+        setSelectedTableCards([]);
+      }
+    }
+
+    dealInitialHand();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [match?.id, match?.currentRound.id, match?.currentRound.gameState.phase, match?.status]);
 
   async function run(action: () => Promise<MatchState>) {
     try {

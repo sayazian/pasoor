@@ -587,7 +587,9 @@ h2 {
   border: var(--theme-secondary-button-border);
   color: var(--theme-secondary-button-color);
   font-weight: 800;
+  min-width: 0;
   text-decoration: none;
+  width: 100%;
 }
 
 .match-summary {
@@ -669,8 +671,8 @@ h2 {
 }
 
 .left-column {
-  align-content: center;
-  grid-template-rows: 118px 196px 120px 44px;
+  align-content: start;
+  grid-template-rows: minmax(112px, auto) minmax(184px, auto) minmax(112px, auto) minmax(44px, auto);
   justify-items: stretch;
   overflow: hidden;
 }

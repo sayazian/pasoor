@@ -74,6 +74,23 @@ describe('theme stylesheet buttons', () => {
     expect(screen.getByText('Table')).toBeInTheDocument();
   });
 
+  it('keeps the exit match control constrained to the left column', () => {
+    render(
+      <aside className="left-column">
+        <div className="left-status">
+          <h1>Alexandria turn</h1>
+        </div>
+        <section className="pile-panel">Deck</section>
+        <section className="match-summary">Score</section>
+        <button className="secondary-action-button" type="button">
+          Exit Match
+        </button>
+      </aside>
+    );
+
+    expect(screen.getByRole('button', { name: /exit match/i })).toHaveClass('secondary-action-button');
+  });
+
   it('uses readable textbox classes in dark themes', () => {
     render(
       <div className="theme-dark-card-room">
