@@ -116,6 +116,39 @@ const dealtMatchState: MatchState = {
   }
 };
 
+const betweenHandsMatchState: MatchState = {
+  ...newMatchState,
+  currentRound: {
+    ...newMatchState.currentRound,
+    gameState: {
+      ...newGameState,
+      deckCount: 32,
+      myHand: [],
+      opponentHand: [],
+      opponentHandCount: 0,
+      tableCards: [
+        { id: 'HEARTS-TWO', suit: 'HEARTS', rank: 'TWO', value: 2 },
+        { id: 'SPADES-KING', suit: 'SPADES', rank: 'KING', value: 13 }
+      ],
+      phase: 'PLAYING',
+      initialDealDone: true
+    }
+  }
+};
+
+const nextHandMatchState: MatchState = {
+  ...newMatchState,
+  currentRound: {
+    ...newMatchState.currentRound,
+    gameState: {
+      ...newGameState,
+      deckCount: 24,
+      phase: 'PLAYING',
+      initialDealDone: true
+    }
+  }
+};
+
 const waitingMatchState: MatchState = {
   ...newMatchState,
   status: 'WAITING'
@@ -211,6 +244,46 @@ describe('App routing', () => {
       );
     });
     expect(screen.getByText('Play a card')).toBeInTheDocument();
+  });
+
+  it('automatically deals the next hand when both hands are empty and cards remain in the deck', async () => {
+    window.history.pushState({}, '', `/game/${newMatchState.id}`);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`) && !init?.method) {
+        return Response.json(betweenHandsMatchState);
+      }
+      if (
+        url.endsWith(`/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/deal`) &&
+        init?.method === 'POST'
+      ) {
+        return Response.json(nextHandMatchState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText('24')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `http://localhost:8080/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/deal`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    expect(screen.getByText('Play a card')).toBeInTheDocument();
+    expect(screen.getAllByText('4 cards')).toHaveLength(2);
   });
 
   afterEach(() => {

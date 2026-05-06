@@ -80,25 +80,35 @@ export default function GamePage() {
   }, [match?.rematchId, navigate]);
 
   useEffect(() => {
-    if (!match || match.status !== 'ACTIVE' || match.currentRound.gameState.phase !== 'NEW') {
+    if (!shouldAutoDeal(match)) {
       return;
     }
 
     let cancelled = false;
 
-    async function dealInitialHand() {
+    async function dealHand() {
       const dealtMatch = await run(() => dealMatchRound(match!.id, match!.currentRound.id));
       if (!cancelled && dealtMatch) {
         setSelectedTableCards([]);
       }
     }
 
-    dealInitialHand();
+    dealHand();
 
     return () => {
       cancelled = true;
     };
-  }, [match?.id, match?.currentRound.id, match?.currentRound.gameState.phase, match?.status]);
+  }, [
+    match?.id,
+    match?.currentRound.id,
+    match?.currentRound.gameState.deckCount,
+    match?.currentRound.gameState.myHand.length,
+    match?.currentRound.gameState.opponentHandCount,
+    match?.currentRound.gameState.opponentHand.length,
+    match?.currentRound.gameState.pendingCaptureCard?.id,
+    match?.currentRound.gameState.phase,
+    match?.status
+  ]);
 
   async function run(action: () => Promise<MatchState>) {
     try {
@@ -357,6 +367,19 @@ function unacknowledgedRound(match: MatchState) {
   }
 
   return round;
+}
+
+function shouldAutoDeal(match: MatchState | null) {
+  if (!match || match.status !== 'ACTIVE') {
+    return false;
+  }
+
+  const game = match.currentRound.gameState;
+  const opponentHandCount = game.opponentHandCount ?? game.opponentHand.length;
+  const bothHandsEmpty = game.myHand.length === 0 && opponentHandCount === 0;
+
+  return game.phase === 'NEW'
+    || (game.phase === 'PLAYING' && game.deckCount > 0 && bothHandsEmpty && game.pendingCaptureCard === null);
 }
 
 function viewerAcknowledged(match: MatchState, round: RoundState) {
