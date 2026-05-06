@@ -8,7 +8,9 @@ public record RoundResponse(
         RoundStatus status,
         VisibleGameState gameState,
         Integer playerOneRoundScore,
-        Integer playerTwoRoundScore
+        Integer playerTwoRoundScore,
+        boolean playerOneAcknowledged,
+        boolean playerTwoAcknowledged
 ) {
     static RoundResponse from(GameRound round, VisibleGameState gameState) {
         return new RoundResponse(
@@ -17,7 +19,9 @@ public record RoundResponse(
                 round.getStatus(),
                 gameState,
                 round.getPlayerOneRoundScore(),
-                round.getPlayerTwoRoundScore()
+                round.getPlayerTwoRoundScore(),
+                round.getPlayerOneAcknowledgedAt() != null,
+                round.getPlayerTwoAcknowledgedAt() != null
         );
     }
 }

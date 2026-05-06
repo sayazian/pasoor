@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -45,7 +46,7 @@ public class MatchService {
     @Transactional
     public MatchResponse createMatch(User playerOne) {
         PasoorMatch match = matchRepository.save(new PasoorMatch(playerOne));
-        GameRound round = roundRepository.save(new GameRound(match, 1, writeGameState(gameService.createGame())));
+        GameRound round = roundRepository.save(new GameRound(match, 1, writeGameState(createDealtGame(Player.ME))));
         LOGGER.info("Match {} created by playerOne {}.", match.getId(), playerOne.getId());
 
         return response(match, round, playerOne);
@@ -63,7 +64,57 @@ public class MatchService {
     public MatchResponse exitMatch(User user, UUID matchId) {
         PasoorMatch match = ownedMatch(user, matchId);
         match.setStatus(MatchStatus.ABANDONED);
+        match.setExitedBy(user);
         LOGGER.info("Match {} abandoned by user {}.", match.getId(), user.getId());
+        return response(match, currentRound(match), user);
+    }
+
+    @Transactional
+    public MatchResponse acknowledgeRound(User user, UUID matchId, UUID roundId) {
+        PasoorMatch match = ownedMatch(user, matchId);
+        GameRound round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Round not found."));
+        if (!round.getMatch().getId().equals(match.getId()) || round.getStatus() != RoundStatus.FINISHED) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Finished round not found.");
+        }
+
+        if (viewerSide(match, user) == MatchPlayerSide.PLAYER_ONE) {
+            round.setPlayerOneAcknowledgedAt(Instant.now());
+        } else {
+            round.setPlayerTwoAcknowledgedAt(Instant.now());
+        }
+
+        return response(match, currentRound(match), user);
+    }
+
+    @Transactional
+    public MatchResponse chooseMatchEnd(User user, UUID matchId, MatchEndChoiceRequest request) {
+        PasoorMatch match = ownedMatch(user, matchId);
+        if (match.getStatus() != MatchStatus.FINISHED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Match is not finished.");
+        }
+        if (request.choice() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choice is required.");
+        }
+
+        if (viewerSide(match, user) == MatchPlayerSide.PLAYER_ONE) {
+            match.setPlayerOneEndChoice(request.choice());
+        } else {
+            match.setPlayerTwoEndChoice(request.choice());
+        }
+
+        if (match.getPlayerOneEndChoice() == MatchEndChoice.PLAY_AGAIN
+                && match.getPlayerTwoEndChoice() == MatchEndChoice.PLAY_AGAIN
+                && match.getRematch() == null
+                && match.getPlayerTwo() != null) {
+            PasoorMatch rematch = matchRepository.save(new PasoorMatch(match.getPlayerOne()));
+            rematch.setPlayerTwo(match.getPlayerTwo());
+            GameRound round = roundRepository.save(new GameRound(rematch, 1, writeGameState(createDealtGame(Player.ME))));
+            match.setRematch(rematch);
+            LOGGER.info("Rematch {} created from finished match {}.", rematch.getId(), match.getId());
+            return response(rematch, round, user);
+        }
+
         return response(match, currentRound(match), user);
     }
 
@@ -110,7 +161,7 @@ public class MatchService {
                 GameRound nextRound = roundRepository.save(new GameRound(
                         match,
                         round.getRoundNumber() + 1,
-                        writeGameState(gameService.createGame())
+                        writeGameState(createDealtGame(startingPlayerForRound(round.getRoundNumber() + 1)))
                 ));
                 return response(match, nextRound, user);
             }
@@ -184,8 +235,23 @@ public class MatchService {
         return MatchResponse.from(
                 match,
                 viewerSide(match, viewer),
-                RoundResponse.from(round, VisibleGameState.from(readGameState(round), viewerPlayer))
+                RoundResponse.from(round, VisibleGameState.from(readGameState(round), viewerPlayer)),
+                lastCompletedRound(match, viewerPlayer),
+                completedRounds(match, viewerPlayer)
         );
+    }
+
+    private RoundResponse lastCompletedRound(PasoorMatch match, Player viewerPlayer) {
+        return roundRepository.findFirstByMatchIdAndStatusOrderByFinishedAtDesc(match.getId(), RoundStatus.FINISHED)
+                .map(round -> RoundResponse.from(round, VisibleGameState.from(readGameState(round), viewerPlayer)))
+                .orElse(null);
+    }
+
+    private List<RoundResponse> completedRounds(PasoorMatch match, Player viewerPlayer) {
+        return roundRepository.findByMatchIdAndStatusOrderByRoundNumberAsc(match.getId(), RoundStatus.FINISHED)
+                .stream()
+                .map(round -> RoundResponse.from(round, VisibleGameState.from(readGameState(round), viewerPlayer)))
+                .toList();
     }
 
     public MatchResponse responseFor(PasoorMatch match, User viewer) {
@@ -196,6 +262,14 @@ public class MatchService {
         return match.getPlayerOne().getId().equals(user.getId())
                 ? Player.ME
                 : Player.OPPONENT;
+    }
+
+    private Player startingPlayerForRound(int roundNumber) {
+        return roundNumber % 2 == 1 ? Player.ME : Player.OPPONENT;
+    }
+
+    private GameState createDealtGame(Player startingPlayer) {
+        return gameService.deal(gameService.createGame(startingPlayer));
     }
 
     private MatchPlayerSide viewerSide(PasoorMatch match, User user) {

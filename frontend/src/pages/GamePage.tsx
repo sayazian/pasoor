@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { captureMatchCards, createMatch, dealMatchRound, exitMatch, getMatch, playMatchCard } from '../api/matchesApi';
+import {
+  acknowledgeRound,
+  captureMatchCards,
+  chooseMatchEnd,
+  createMatch,
+  exitMatch,
+  getMatch,
+  playMatchCard
+} from '../api/matchesApi';
 import GameBoard from '../components/GameBoard';
+import ScoreBoard from '../components/ScoreBoard';
 import type { Player } from '../types/game';
-import type { MatchState } from '../types/match';
+import type { MatchEndChoice, MatchPlayer, MatchState, RoundState } from '../types/match';
 
 export default function GamePage() {
   const { matchId } = useParams();
@@ -15,6 +25,7 @@ export default function GamePage() {
   const [match, setMatch] = useState<MatchState | null>(null);
   const [selectedTableCards, setSelectedTableCards] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [matchChoiceError, setMatchChoiceError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +56,7 @@ export default function GamePage() {
   }, [matchId, navigate]);
 
   useEffect(() => {
-    if (!match?.id || match.status === 'FINISHED' || match.status === 'ABANDONED') {
+    if (!match?.id || match.status === 'ABANDONED') {
       return;
     }
 
@@ -61,6 +72,12 @@ export default function GamePage() {
     return () => window.clearInterval(intervalId);
   }, [match?.id, match?.status]);
 
+  useEffect(() => {
+    if (match?.rematchId) {
+      navigate(`/game/${match.rematchId}`, { replace: true });
+    }
+  }, [match?.rematchId, navigate]);
+
   async function run(action: () => Promise<MatchState>) {
     try {
       setError(null);
@@ -71,22 +88,6 @@ export default function GamePage() {
       setError(caught instanceof Error ? caught.message : 'Something went wrong.');
       return null;
     }
-  }
-
-  async function handleNewGame() {
-    setSelectedTableCards([]);
-    const nextMatch = await run(createMatch);
-    if (nextMatch) {
-      navigate(`/game/${nextMatch.id}`, { replace: true });
-    }
-  }
-
-  async function handleDeal() {
-    if (!match) {
-      return;
-    }
-    setSelectedTableCards([]);
-    await run(() => dealMatchRound(match.id, match.currentRound.id));
   }
 
   async function handlePlayCard(player: Player, cardId: string) {
@@ -126,9 +127,42 @@ export default function GamePage() {
     if (!match) {
       return;
     }
+    if (!window.confirm('Are you sure you want to exit the match?')) {
+      return;
+    }
     const exitedMatch = await run(() => exitMatch(match.id));
     if (exitedMatch) {
       navigate('/dashboard');
+    }
+  }
+
+  async function handleAcknowledgeRound(round: RoundState) {
+    if (!match) {
+      return;
+    }
+    await run(() => acknowledgeRound(match.id, round.id));
+  }
+
+  async function handleMatchEndChoice(choice: MatchEndChoice) {
+    if (!match) {
+      return;
+    }
+    setMatchChoiceError(null);
+    const nextMatch = await run(() => chooseMatchEnd(match.id, choice));
+    if (!nextMatch) {
+      return;
+    }
+    if (choice === 'DASHBOARD') {
+      navigate('/dashboard');
+      return;
+    }
+    if (nextMatch.id !== match.id) {
+      navigate(`/game/${nextMatch.id}`, { replace: true });
+      return;
+    }
+    const opponentChoice = opponentMatchEndChoice(nextMatch);
+    if (opponentChoice === 'DASHBOARD') {
+      setMatchChoiceError('The other player has exited.');
     }
   }
 
@@ -145,7 +179,7 @@ export default function GamePage() {
           <p className="eyebrow">Pasoor</p>
           <h1>Game could not be loaded</h1>
           <p className="error-message">{error}</p>
-          <button type="button" onClick={handleNewGame}>
+          <button type="button" onClick={() => navigate('/dashboard')}>
             Try again
           </button>
         </section>
@@ -175,6 +209,23 @@ export default function GamePage() {
   }
 
   if (match.status === 'ABANDONED') {
+    const otherExited = match.exitedBy && !isViewerPlayer(match, match.exitedBy);
+    if (otherExited) {
+      return (
+        <main className="app-shell">
+          <StatusDialog
+            title="Match exited"
+            message={`${firstName(match.exitedBy?.name, 'The other player')} exited the match.`}
+            actions={
+              <button type="button" onClick={() => navigate('/dashboard')}>
+                OK
+              </button>
+            }
+          />
+        </main>
+      );
+    }
+
     return (
       <main className="app-shell">
         <section className="game-load-error waiting-panel">
@@ -192,6 +243,10 @@ export default function GamePage() {
     );
   }
 
+  const playerNames = visiblePlayerNames(match);
+  const roundForPopup = match.status === 'ACTIVE' ? unacknowledgedRound(match) : null;
+  const matchEndConflict = matchEndConflictMessage(match);
+
   return (
     <main className="app-shell">
       <GameBoard
@@ -199,13 +254,149 @@ export default function GamePage() {
         match={match}
         selectedTableCards={selectedTableCards}
         error={error}
-        onDeal={handleDeal}
         onPlayCard={handlePlayCard}
         onToggleTableCard={handleToggleTableCard}
         onCapture={handleCapture}
-        onNewGame={handleNewGame}
         onExitMatch={handleExitMatch}
       />
+      {roundForPopup?.gameState.score && (
+        <StatusDialog
+          title={`Game ${roundForPopup.roundNumber} score`}
+          actions={
+            <button type="button" onClick={() => handleAcknowledgeRound(roundForPopup)}>
+              OK
+            </button>
+          }
+        >
+          <ScoreBoard score={roundForPopup.gameState.score} myName={playerNames.ME} opponentName={playerNames.OPPONENT} />
+        </StatusDialog>
+      )}
+      {match.status === 'FINISHED' && (
+        <StatusDialog
+          title="Match ended"
+          message={matchWinnerMessage(match)}
+          actions={
+            <>
+              <button type="button" onClick={() => handleMatchEndChoice('PLAY_AGAIN')}>
+                Play another match
+              </button>
+              <button type="button" className="secondary-action-button" onClick={() => handleMatchEndChoice('DASHBOARD')}>
+                Go back to Dashboard
+              </button>
+            </>
+          }
+        >
+          {(matchChoiceError || matchEndConflict) && <p className="error-message">{matchChoiceError ?? matchEndConflict}</p>}
+          <div className="match-round-list">
+            {(match.completedRounds ?? []).map((round) => (
+              <div key={round.id}>
+                <span>Game {round.roundNumber}</span>
+                <strong>{visibleRoundScore(match, round)}</strong>
+              </div>
+            ))}
+          </div>
+        </StatusDialog>
+      )}
     </main>
   );
+}
+
+function StatusDialog({
+  title,
+  message,
+  actions,
+  children
+}: {
+  title: string;
+  message?: string;
+  actions: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="invite-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="status-dialog-title">
+      <section className="invite-modal status-dialog">
+        <p className="eyebrow">Pasoor</p>
+        <h1 id="status-dialog-title">{title}</h1>
+        {message && <p className="muted-text">{message}</p>}
+        {children}
+        <div className="profile-actions">{actions}</div>
+      </section>
+    </div>
+  );
+}
+
+function unacknowledgedRound(match: MatchState) {
+  const round = match.lastCompletedRound;
+  if (!round?.gameState.score) {
+    return null;
+  }
+  if (viewerAcknowledged(match, round)) {
+    return null;
+  }
+
+  return round;
+}
+
+function viewerAcknowledged(match: MatchState, round: RoundState) {
+  return match.viewerSide === 'PLAYER_ONE' ? round.playerOneAcknowledged : round.playerTwoAcknowledged;
+}
+
+function opponentMatchEndChoice(match: MatchState) {
+  return match.viewerSide === 'PLAYER_ONE' ? match.playerTwoEndChoice : match.playerOneEndChoice;
+}
+
+function viewerMatchEndChoice(match: MatchState) {
+  return match.viewerSide === 'PLAYER_ONE' ? match.playerOneEndChoice : match.playerTwoEndChoice;
+}
+
+function matchEndConflictMessage(match: MatchState) {
+  if (viewerMatchEndChoice(match) === 'PLAY_AGAIN' && opponentMatchEndChoice(match) === 'DASHBOARD') {
+    return 'The other player has exited.';
+  }
+
+  return null;
+}
+
+function isViewerPlayer(match: MatchState, player: MatchPlayer) {
+  return match.viewerSide === 'PLAYER_ONE'
+    ? match.playerOne.id === player.id
+    : match.playerTwo?.id === player.id;
+}
+
+function visiblePlayerNames(match: MatchState): Record<Player, string> {
+  if (match.viewerSide === 'PLAYER_TWO') {
+    return {
+      ME: firstName(match.playerTwo?.name, 'You'),
+      OPPONENT: firstName(match.playerOne.name, 'Opponent')
+    };
+  }
+
+  return {
+    ME: firstName(match.playerOne.name, 'You'),
+    OPPONENT: firstName(match.playerTwo?.name, 'Opponent')
+  };
+}
+
+function firstName(name: string | null | undefined, fallback: string) {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed.split(/\s+/)[0] : fallback;
+}
+
+function matchWinnerMessage(match: MatchState) {
+  if (match.winnerSide === match.viewerSide) {
+    return 'You won the match.';
+  }
+  if (match.winner) {
+    return `${firstName(match.winner.name, 'The other player')} won the match.`;
+  }
+
+  return 'The match is complete.';
+}
+
+function visibleRoundScore(match: MatchState, round: RoundState) {
+  const myScore = match.viewerSide === 'PLAYER_TWO' ? round.playerTwoRoundScore : round.playerOneRoundScore;
+  const opponentScore = match.viewerSide === 'PLAYER_TWO' ? round.playerOneRoundScore : round.playerTwoRoundScore;
+  const names = visiblePlayerNames(match);
+
+  return `${names.ME} ${myScore ?? 0} - ${opponentScore ?? 0} ${names.OPPONENT}`;
 }

@@ -23,7 +23,8 @@ export default function FriendsPage() {
   useEffect(() => {
     let cancelled = false;
 
-    getFriends()
+    function refreshFriends() {
+      return getFriends()
       .then((friendsResponse) => {
         if (!cancelled) {
           setFriends(friendsResponse);
@@ -36,9 +37,14 @@ export default function FriendsPage() {
           setStatus('idle');
         }
       });
+    }
+
+    refreshFriends();
+    const intervalId = window.setInterval(refreshFriends, 3000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, []);
 

@@ -1,0 +1,6 @@
+# Copy this file to application-local.properties for local development.
+# Do not commit application-local.properties; it is ignored by Git.
+
+spring.security.oauth2.client.registration.google.client-id=your-google-client-id
+spring.security.oauth2.client.registration.google.client-secret=your-google-client-secret
+app.frontend-url=http://localhost:5173

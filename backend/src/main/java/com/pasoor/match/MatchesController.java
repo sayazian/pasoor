@@ -41,6 +41,15 @@ public class MatchesController {
         return matchService.exitMatch(currentUser(principal), matchId);
     }
 
+    @PostMapping("/{matchId}/end-choice")
+    public MatchResponse chooseMatchEnd(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable UUID matchId,
+            @RequestBody MatchEndChoiceRequest request
+    ) {
+        return matchService.chooseMatchEnd(currentUser(principal), matchId, request);
+    }
+
     @PostMapping("/{matchId}/rounds/{roundId}/deal")
     public MatchResponse deal(
             @AuthenticationPrincipal OAuth2User principal,
@@ -48,6 +57,15 @@ public class MatchesController {
             @PathVariable UUID roundId
     ) {
         return matchService.deal(currentUser(principal), matchId, roundId);
+    }
+
+    @PostMapping("/{matchId}/rounds/{roundId}/acknowledge")
+    public MatchResponse acknowledgeRound(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable UUID matchId,
+            @PathVariable UUID roundId
+    ) {
+        return matchService.acknowledgeRound(currentUser(principal), matchId, roundId);
     }
 
     @PostMapping("/{matchId}/rounds/{roundId}/play")

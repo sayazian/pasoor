@@ -2,6 +2,7 @@ package com.pasoor.match;
 
 import com.pasoor.friend.FriendSummary;
 
+import java.util.List;
 import java.util.UUID;
 
 public record MatchResponse(
@@ -14,9 +15,21 @@ public record MatchResponse(
         int playerTwoTotalScore,
         MatchWinner winnerSide,
         FriendSummary winner,
-        RoundResponse currentRound
+        FriendSummary exitedBy,
+        MatchEndChoice playerOneEndChoice,
+        MatchEndChoice playerTwoEndChoice,
+        UUID rematchId,
+        RoundResponse currentRound,
+        RoundResponse lastCompletedRound,
+        List<RoundResponse> completedRounds
 ) {
-    public static MatchResponse from(PasoorMatch match, MatchPlayerSide viewerSide, RoundResponse currentRound) {
+    public static MatchResponse from(
+            PasoorMatch match,
+            MatchPlayerSide viewerSide,
+            RoundResponse currentRound,
+            RoundResponse lastCompletedRound,
+            List<RoundResponse> completedRounds
+    ) {
         return new MatchResponse(
                 match.getId(),
                 match.getStatus(),
@@ -27,7 +40,13 @@ public record MatchResponse(
                 match.getPlayerTwoTotalScore(),
                 match.getWinnerSide(),
                 match.getWinner() == null ? null : FriendSummary.from(match.getWinner()),
-                currentRound
+                match.getExitedBy() == null ? null : FriendSummary.from(match.getExitedBy()),
+                match.getPlayerOneEndChoice(),
+                match.getPlayerTwoEndChoice(),
+                match.getRematch() == null ? null : match.getRematch().getId(),
+                currentRound,
+                lastCompletedRound,
+                completedRounds
         );
     }
 }

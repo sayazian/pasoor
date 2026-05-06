@@ -1,6 +1,6 @@
 import type { Player } from '../types/game';
 import type { GameInvite, GameInviteListResponse } from '../types/invite';
-import type { MatchState } from '../types/match';
+import type { MatchEndChoice, MatchState } from '../types/match';
 import { request } from './http';
 
 export function createMatch(): Promise<MatchState> {
@@ -13,6 +13,13 @@ export function getMatch(matchId: string): Promise<MatchState> {
 
 export function exitMatch(matchId: string): Promise<MatchState> {
   return request<MatchState>(`/api/matches/${matchId}/exit`, { method: 'POST' });
+}
+
+export function chooseMatchEnd(matchId: string, choice: MatchEndChoice): Promise<MatchState> {
+  return request<MatchState>(`/api/matches/${matchId}/end-choice`, {
+    method: 'POST',
+    body: JSON.stringify({ choice })
+  });
 }
 
 export function inviteFriendToMatch(matchId: string, email: string): Promise<GameInvite> {
@@ -40,6 +47,10 @@ export function declineInvite(token: string): Promise<GameInvite> {
 
 export function dealMatchRound(matchId: string, roundId: string): Promise<MatchState> {
   return request<MatchState>(`/api/matches/${matchId}/rounds/${roundId}/deal`, { method: 'POST' });
+}
+
+export function acknowledgeRound(matchId: string, roundId: string): Promise<MatchState> {
+  return request<MatchState>(`/api/matches/${matchId}/rounds/${roundId}/acknowledge`, { method: 'POST' });
 }
 
 export function playMatchCard(matchId: string, roundId: string, player: Player, cardId: string): Promise<MatchState> {

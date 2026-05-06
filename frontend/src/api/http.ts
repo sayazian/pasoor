@@ -1,4 +1,8 @@
-export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+export const API_BASE = resolveApiBase(import.meta.env.VITE_API_BASE_URL, import.meta.env.PROD);
+
+export function resolveApiBase(configuredApiBase: string | undefined, isProduction: boolean) {
+  return configuredApiBase ?? (isProduction ? '' : 'http://localhost:8080');
+}
 
 export class ApiError extends Error {
   readonly status: number;

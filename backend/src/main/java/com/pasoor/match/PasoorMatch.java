@@ -43,9 +43,25 @@ public class PasoorMatch {
     @JoinColumn(name = "winner_id")
     private User winner;
 
+    @ManyToOne
+    @JoinColumn(name = "exited_by_id")
+    private User exitedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "rematch_id")
+    private PasoorMatch rematch;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "winner_side")
     private MatchWinner winnerSide;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "player_one_end_choice")
+    private MatchEndChoice playerOneEndChoice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "player_two_end_choice")
+    private MatchEndChoice playerTwoEndChoice;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -122,12 +138,44 @@ public class PasoorMatch {
         this.winner = winner;
     }
 
+    public User getExitedBy() {
+        return exitedBy;
+    }
+
+    public void setExitedBy(User exitedBy) {
+        this.exitedBy = exitedBy;
+    }
+
+    public PasoorMatch getRematch() {
+        return rematch;
+    }
+
+    public void setRematch(PasoorMatch rematch) {
+        this.rematch = rematch;
+    }
+
     public MatchWinner getWinnerSide() {
         return winnerSide;
     }
 
     public void setWinnerSide(MatchWinner winnerSide) {
         this.winnerSide = winnerSide;
+    }
+
+    public MatchEndChoice getPlayerOneEndChoice() {
+        return playerOneEndChoice;
+    }
+
+    public void setPlayerOneEndChoice(MatchEndChoice playerOneEndChoice) {
+        this.playerOneEndChoice = playerOneEndChoice;
+    }
+
+    public MatchEndChoice getPlayerTwoEndChoice() {
+        return playerTwoEndChoice;
+    }
+
+    public void setPlayerTwoEndChoice(MatchEndChoice playerTwoEndChoice) {
+        this.playerTwoEndChoice = playerTwoEndChoice;
     }
 
     public Instant getCreatedAt() {

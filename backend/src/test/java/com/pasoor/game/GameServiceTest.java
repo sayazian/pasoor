@@ -35,6 +35,44 @@ class GameServiceTest {
     }
 
     @Test
+    void firstDealPreservesConfiguredStartingPlayer() {
+        GameService service = new GameService();
+        GameState state = service.createGame(Player.OPPONENT);
+
+        state = service.deal(state);
+
+        assertThat(state.getCurrentTurn()).isEqualTo(Player.OPPONENT);
+    }
+
+    @Test
+    void finishingAHandAutomaticallyDealsNextHandWhenDeckHasCards() {
+        GameService service = new GameService();
+        GameState state = service.createGame();
+        state.setPhase(GamePhase.PLAYING);
+        state.setInitialDealDone(true);
+        state.setMyHand(new ArrayList<>(List.of(card(Suit.CLUBS, Rank.JACK))));
+        state.setOpponentHand(new ArrayList<>(List.of(card(Suit.HEARTS, Rank.KING))));
+        state.setDeck(new ArrayList<>(List.of(
+                card(Suit.CLUBS, Rank.TWO),
+                card(Suit.CLUBS, Rank.THREE),
+                card(Suit.CLUBS, Rank.FOUR),
+                card(Suit.CLUBS, Rank.FIVE),
+                card(Suit.DIAMONDS, Rank.TWO),
+                card(Suit.DIAMONDS, Rank.THREE),
+                card(Suit.DIAMONDS, Rank.FOUR),
+                card(Suit.DIAMONDS, Rank.FIVE)
+        )));
+
+        state = service.playCard(state, new PlayCardRequest(Player.ME, state.getMyHand().getFirst().id()));
+        state = service.playCard(state, new PlayCardRequest(Player.OPPONENT, state.getOpponentHand().getFirst().id()));
+
+        assertThat(state.getMyHand()).hasSize(4);
+        assertThat(state.getOpponentHand()).hasSize(4);
+        assertThat(state.getDeck()).isEmpty();
+        assertThat(state.getCurrentTurn()).isEqualTo(Player.ME);
+    }
+
+    @Test
     void playCardDropsWhenNoCaptureIsAvailableAndAlternatesTurn() {
         GameService service = new GameService();
         GameState state = service.newGame();

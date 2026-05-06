@@ -10,6 +10,8 @@ import com.pasoor.invite.GameInviteRepository;
 import com.pasoor.match.GameRound;
 import com.pasoor.match.GameRoundRepository;
 import com.pasoor.match.MatchRepository;
+import com.pasoor.match.MatchStatus;
+import com.pasoor.match.MatchWinner;
 import com.pasoor.user.User;
 import com.pasoor.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
@@ -134,14 +137,16 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.playerOneTotalScore").value(0))
                 .andExpect(jsonPath("$.playerTwoTotalScore").value(0))
                 .andExpect(jsonPath("$.currentRound.roundNumber").value(1))
-                .andExpect(jsonPath("$.currentRound.gameState.deckCount").value(52));
+                .andExpect(jsonPath("$.currentRound.gameState.deckCount").value(40))
+                .andExpect(jsonPath("$.currentRound.gameState.myHand.length()").value(4))
+                .andExpect(jsonPath("$.currentRound.gameState.tableCards.length()").value(4));
 
         assertThat(matchRepository.count()).isEqualTo(1);
         assertThat(roundRepository.count()).isEqualTo(1);
     }
 
     @Test
-    void matchDealUpdatesPersistedRound() throws Exception {
+    void matchDealRejectsWhenHandsAreAlreadyDealt() throws Exception {
         String createResponse = mockMvc.perform(post("/api/matches")
                         .with(oauthUser("player-google", "Player", "player@example.com")))
                 .andExpect(status().isOk())
@@ -154,12 +159,7 @@ class SecurityIntegrationTest {
 
         mockMvc.perform(post("/api/matches/{matchId}/rounds/{roundId}/deal", matchId, roundId)
                         .with(oauthUser("player-google", "Player", "player@example.com")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currentRound.id").value(roundId))
-                .andExpect(jsonPath("$.currentRound.gameState.deckCount").value(40))
-                .andExpect(jsonPath("$.currentRound.gameState.myHand").isArray())
-                .andExpect(jsonPath("$.currentRound.gameState.myHand.length()").value(4))
-                .andExpect(jsonPath("$.currentRound.gameState.tableCards.length()").value(4));
+                .andExpect(status().isBadRequest());
 
         mockMvc.perform(get("/api/matches/{matchId}", matchId)
                         .with(oauthUser("player-google", "Player", "player@example.com")))
@@ -201,7 +201,8 @@ class SecurityIntegrationTest {
         mockMvc.perform(post("/api/matches/{matchId}/exit", matchId)
                         .with(oauthUser("player-google", "Player", "player@example.com")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ABANDONED"));
+                .andExpect(jsonPath("$.status").value("ABANDONED"))
+                .andExpect(jsonPath("$.exitedBy.email").value("player@example.com"));
     }
 
     @Test
@@ -390,7 +391,7 @@ class SecurityIntegrationTest {
     @Test
     void twoPlayerMatchResponsesHideOpponentHandIdentities() throws Exception {
         TwoPlayerMatch twoPlayerMatch = activeTwoPlayerMatch();
-        String dealResponse = mockMvc.perform(post("/api/matches/{matchId}/rounds/{roundId}/deal", twoPlayerMatch.matchId(), twoPlayerMatch.roundId())
+        String playerOneResponse = mockMvc.perform(get("/api/matches/{matchId}", twoPlayerMatch.matchId())
                         .with(oauthUser("sender-google", "Sender", "sender@example.com")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.viewerSide").value("PLAYER_ONE"))
@@ -400,7 +401,7 @@ class SecurityIntegrationTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        JsonNode playerOneCards = objectMapper.readTree(dealResponse)
+        JsonNode playerOneCards = objectMapper.readTree(playerOneResponse)
                 .get("currentRound")
                 .get("gameState")
                 .get("myHand");
@@ -424,13 +425,13 @@ class SecurityIntegrationTest {
     @Test
     void twoPlayerMatchTranslatesViewerActionsAndRejectsActingForOpponent() throws Exception {
         TwoPlayerMatch twoPlayerMatch = activeTwoPlayerMatch();
-        String dealResponse = mockMvc.perform(post("/api/matches/{matchId}/rounds/{roundId}/deal", twoPlayerMatch.matchId(), twoPlayerMatch.roundId())
+        String playerOneResponse = mockMvc.perform(get("/api/matches/{matchId}", twoPlayerMatch.matchId())
                         .with(oauthUser("sender-google", "Sender", "sender@example.com")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        String playerOneCardId = objectMapper.readTree(dealResponse)
+        String playerOneCardId = objectMapper.readTree(playerOneResponse)
                 .get("currentRound")
                 .get("gameState")
                 .get("myHand")
@@ -482,6 +483,68 @@ class SecurityIntegrationTest {
                                 """.formatted(playerTwoCardId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.viewerSide").value("PLAYER_TWO"));
+    }
+
+    @Test
+    void acknowledgeRoundStoresViewerAcknowledgement() throws Exception {
+        String createResponse = mockMvc.perform(post("/api/matches")
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode createJson = objectMapper.readTree(createResponse);
+        UUID matchId = UUID.fromString(createJson.get("id").asText());
+        UUID roundId = UUID.fromString(createJson.get("currentRound").get("id").asText());
+        GameRound round = roundRepository.findById(roundId).orElseThrow();
+        GameState state = objectMapper.readValue(round.getGameStateJson(), GameState.class);
+        state.setScore(new com.pasoor.game.Score(7, 4, 4, 3, 0, 0, 3, 1));
+        round.setGameStateJson(objectMapper.writeValueAsString(state));
+        round.setStatus(com.pasoor.match.RoundStatus.FINISHED);
+        round.setFinishedAt(Instant.now());
+        round.setPlayerOneRoundScore(7);
+        round.setPlayerTwoRoundScore(4);
+        roundRepository.saveAndFlush(round);
+
+        mockMvc.perform(post("/api/matches/{matchId}/rounds/{roundId}/acknowledge", matchId, roundId)
+                        .with(oauthUser("player-google", "Player", "player@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastCompletedRound.playerOneAcknowledged").value(true))
+                .andExpect(jsonPath("$.lastCompletedRound.playerTwoAcknowledged").value(false));
+    }
+
+    @Test
+    void bothPlayersChoosingPlayAgainCreatesRematch() throws Exception {
+        TwoPlayerMatch twoPlayerMatch = activeTwoPlayerMatch();
+        UUID matchId = UUID.fromString(twoPlayerMatch.matchId());
+        var match = matchRepository.findById(matchId).orElseThrow();
+        match.setStatus(MatchStatus.FINISHED);
+        match.setPlayerOneTotalScore(72);
+        match.setPlayerTwoTotalScore(58);
+        match.setWinnerSide(MatchWinner.PLAYER_ONE);
+        match.setWinner(match.getPlayerOne());
+        matchRepository.saveAndFlush(match);
+
+        mockMvc.perform(post("/api/matches/{matchId}/end-choice", matchId)
+                        .with(oauthUser("sender-google", "Sender", "sender@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"choice":"PLAY_AGAIN"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(matchId.toString()))
+                .andExpect(jsonPath("$.playerOneEndChoice").value("PLAY_AGAIN"));
+
+        mockMvc.perform(post("/api/matches/{matchId}/end-choice", matchId)
+                        .with(oauthUser("recipient-google", "Recipient", "recipient@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"choice":"PLAY_AGAIN"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(matchId.toString())))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.currentRound.gameState.deckCount").value(40));
     }
 
     @Test

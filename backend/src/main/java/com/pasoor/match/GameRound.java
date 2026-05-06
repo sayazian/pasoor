@@ -45,6 +45,12 @@ public class GameRound {
     @Column(name = "finished_at")
     private Instant finishedAt;
 
+    @Column(name = "player_one_acknowledged_at")
+    private Instant playerOneAcknowledgedAt;
+
+    @Column(name = "player_two_acknowledged_at")
+    private Instant playerTwoAcknowledgedAt;
+
     protected GameRound() {
     }
 
@@ -111,5 +117,21 @@ public class GameRound {
 
     public void setFinishedAt(Instant finishedAt) {
         this.finishedAt = finishedAt;
+    }
+
+    public Instant getPlayerOneAcknowledgedAt() {
+        return playerOneAcknowledgedAt;
+    }
+
+    public void setPlayerOneAcknowledgedAt(Instant playerOneAcknowledgedAt) {
+        this.playerOneAcknowledgedAt = playerOneAcknowledgedAt;
+    }
+
+    public Instant getPlayerTwoAcknowledgedAt() {
+        return playerTwoAcknowledgedAt;
+    }
+
+    public void setPlayerTwoAcknowledgedAt(Instant playerTwoAcknowledgedAt) {
+        this.playerTwoAcknowledgedAt = playerTwoAcknowledgedAt;
     }
 }

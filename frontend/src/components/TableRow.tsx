@@ -6,6 +6,7 @@ interface TableRowProps {
   selectedCardIds: string[];
   pendingCaptureCardId: string | null;
   pendingCapturePlayer: Player | null;
+  prompt: string;
   onToggleCard: (cardId: string) => void;
   onCapture: () => void;
 }
@@ -15,6 +16,7 @@ export default function TableRow({
   selectedCardIds,
   pendingCaptureCardId,
   pendingCapturePlayer,
+  prompt,
   onToggleCard,
   onCapture
 }: TableRowProps) {
@@ -27,15 +29,14 @@ export default function TableRow({
         <h2>Table</h2>
         {canChooseCapture ? (
           <div className="collect-actions">
+            <span>{prompt}</span>
             <span>{selectedCardIds.length} selected</span>
             <button type="button" onClick={onCapture}>
               Capture
             </button>
           </div>
-        ) : hasPendingCapture ? (
-          <span>Opponent choosing capture</span>
         ) : (
-          <span>Drop a card first</span>
+          <span>{prompt}</span>
         )}
       </div>
       <div className="cards-row table-cards">
@@ -53,7 +54,6 @@ export default function TableRow({
           ))
         )}
       </div>
-      {pendingCapturePlayer && <p className="pending-label">{pendingCapturePlayer === 'ME' ? 'My' : "Opponent's"} capture pending</p>}
     </section>
   );
 }

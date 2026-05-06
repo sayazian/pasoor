@@ -25,6 +25,12 @@ public class GameService {
         return createNewGame();
     }
 
+    public GameState createGame(Player startingPlayer) {
+        GameState state = createNewGame();
+        state.setCurrentTurn(startingPlayer);
+        return state;
+    }
+
     public synchronized GameState getGame() {
         return gameState;
     }
@@ -52,7 +58,6 @@ public class GameService {
             gameState.setInitialDealDone(true);
         }
 
-        gameState.setCurrentTurn(Player.ME);
         gameState.setPhase(GamePhase.PLAYING);
         return gameState;
     }
@@ -139,6 +144,9 @@ public class GameService {
             gameState.setPhase(GamePhase.FINISHED);
         } else {
             gameState.setCurrentTurn(nextPlayer(player));
+            if (gameState.getMyHand().isEmpty() && gameState.getOpponentHand().isEmpty()) {
+                deal();
+            }
         }
     }
 

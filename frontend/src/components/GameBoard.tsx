@@ -1,10 +1,8 @@
-import { RotateCcw } from 'lucide-react';
 import type { GameState, Player } from '../types/game';
 import type { MatchState } from '../types/match';
 import CollectedPile from './CollectedPile';
 import DeckPile from './DeckPile';
 import HandRow from './HandRow';
-import ScoreBoard from './ScoreBoard';
 import TableRow from './TableRow';
 
 interface GameBoardProps {
@@ -12,11 +10,9 @@ interface GameBoardProps {
   match?: MatchState;
   selectedTableCards: string[];
   error: string | null;
-  onDeal: () => void;
   onPlayCard: (player: Player, cardId: string) => void;
   onToggleTableCard: (cardId: string) => void;
   onCapture: () => void;
-  onNewGame: () => void;
   onExitMatch?: () => void;
 }
 
@@ -25,11 +21,9 @@ export default function GameBoard({
   match,
   selectedTableCards,
   error,
-  onDeal,
   onPlayCard,
   onToggleTableCard,
   onCapture,
-  onNewGame,
   onExitMatch
 }: GameBoardProps) {
   const isPendingCapture = game.pendingCaptureCard !== null;
@@ -37,6 +31,8 @@ export default function GameBoard({
   const matchAbandoned = match?.status === 'ABANDONED';
   const opponentHandCount = game.opponentHandCount ?? game.opponentHand.length;
   const score = match ? visibleMatchScore(match) : null;
+  const playerNames = visiblePlayerNames(match);
+  const tablePrompt = tableStatusPrompt(game, playerNames.OPPONENT);
 
   return (
     <section className="game">
@@ -45,13 +41,10 @@ export default function GameBoard({
           <div className="left-status">
             <div>
               <p className="eyebrow">Pasoor</p>
-              <h1>{game.phase === 'FINISHED' ? 'Game finished' : `${labelForPlayer(game.currentTurn)} turn`}</h1>
-              {game.phase === 'PLAYING' && game.currentTurn === 'OPPONENT' && (
-                <p className="turn-note">Waiting for opponent</p>
-              )}
+              <h1>{game.phase === 'FINISHED' ? 'Game finished' : `${playerNames[game.currentTurn]} turn`}</h1>
             </div>
           </div>
-          <DeckPile count={game.deckCount} phase={game.phase} onDeal={onDeal} />
+          <DeckPile count={game.deckCount} phase={game.phase} />
           {match && (
             <div className="match-summary" aria-label="Match score">
               <div>
@@ -59,24 +52,17 @@ export default function GameBoard({
                 <strong>{match.currentRound.roundNumber}</strong>
               </div>
               <div>
-                <span>Me</span>
+                <span>{playerNames.ME}</span>
                 <strong>{score?.myTotalScore ?? 0}</strong>
               </div>
               <div>
-                <span>Opponent</span>
+                <span>{playerNames.OPPONENT}</span>
                 <strong>{score?.opponentTotalScore ?? 0}</strong>
               </div>
-              {matchFinished && <p>{winnerLabel(match)} wins the match</p>}
+              {matchFinished && <p>{winnerLabel(match)}</p>}
               {matchAbandoned && <p>Match exited</p>}
             </div>
           )}
-          <button className="new-game-button" type="button" onClick={onNewGame}>
-            <RotateCcw size={18} aria-hidden="true" />
-            New Game
-          </button>
-          <a className="secondary-action-button" href="/dashboard">
-            Dashboard
-          </a>
           {onExitMatch && match?.status === 'ACTIVE' && (
             <button className="secondary-action-button" type="button" onClick={onExitMatch}>
               Exit Match
@@ -86,7 +72,7 @@ export default function GameBoard({
 
         <div className="middle-column">
           <HandRow
-            title="Opponent"
+            title={playerNames.OPPONENT}
             player="OPPONENT"
             cards={game.opponentHand}
             cardCount={opponentHandCount}
@@ -99,11 +85,12 @@ export default function GameBoard({
             selectedCardIds={selectedTableCards}
             pendingCaptureCardId={game.pendingCaptureCard?.id ?? null}
             pendingCapturePlayer={game.pendingCapturePlayer}
+            prompt={tablePrompt}
             onToggleCard={onToggleTableCard}
             onCapture={onCapture}
           />
           <HandRow
-            title="Me"
+            title={playerNames.ME}
             player="ME"
             cards={game.myHand}
             currentTurn={game.currentTurn}
@@ -113,35 +100,46 @@ export default function GameBoard({
         </div>
 
         <aside className="right-column">
-          <CollectedPile title="Opponent used" count={game.opponentCollectedPile.length} surCount={game.opponentSurCount} />
-          <CollectedPile title="My used" count={game.myCollectedPile.length} surCount={game.mySurCount} />
+          <CollectedPile title={`${playerNames.OPPONENT} taken`} count={game.opponentCollectedPile.length} surCount={game.opponentSurCount} />
+          <CollectedPile title={`${playerNames.ME} taken`} count={game.myCollectedPile.length} surCount={game.mySurCount} />
         </aside>
       </div>
 
       {error && <p className="error-message">{error}</p>}
-
-      {game.phase === 'FINISHED' && game.score && <ScoreBoard score={game.score} />}
-
     </section>
   );
 }
 
-function labelForPlayer(player: Player) {
-  return player === 'ME' ? 'My' : "Opponent's";
-}
-
 function winnerLabel(match: MatchState) {
   if (match.winnerSide === match.viewerSide) {
-    return 'Me';
+    return 'You won the match';
   }
   if (match.winnerSide === 'PLAYER_ONE') {
-    return match.playerOne.name;
+    return `${firstName(match.playerOne.name, 'Opponent')} won the match`;
   }
   if (match.winnerSide === 'PLAYER_TWO') {
-    return match.playerTwo?.name ?? 'Opponent';
+    return `${firstName(match.playerTwo?.name, 'Opponent')} won the match`;
   }
 
-  return 'Winner';
+  return 'Match finished';
+}
+
+function visiblePlayerNames(match?: MatchState): Record<Player, string> {
+  if (!match) {
+    return { ME: 'You', OPPONENT: 'Opponent' };
+  }
+
+  if (match.viewerSide === 'PLAYER_TWO') {
+    return {
+      ME: firstName(match.playerTwo?.name, 'You'),
+      OPPONENT: firstName(match.playerOne.name, 'Opponent')
+    };
+  }
+
+  return {
+    ME: firstName(match.playerOne.name, 'You'),
+    OPPONENT: firstName(match.playerTwo?.name, 'Opponent')
+  };
 }
 
 function visibleMatchScore(match: MatchState) {
@@ -156,4 +154,23 @@ function visibleMatchScore(match: MatchState) {
     myTotalScore: match.playerOneTotalScore,
     opponentTotalScore: match.playerTwoTotalScore
   };
+}
+
+function tableStatusPrompt(game: GameState, opponentName: string) {
+  if (game.pendingCapturePlayer === 'ME') {
+    return 'Waiting for your capture';
+  }
+  if (game.pendingCapturePlayer === 'OPPONENT') {
+    return `Waiting for ${opponentName} capture`;
+  }
+  if (game.currentTurn === 'ME') {
+    return 'Play a card';
+  }
+
+  return `Waiting for ${opponentName}`;
+}
+
+function firstName(name: string | null | undefined, fallback: string) {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed.split(/\s+/)[0] : fallback;
 }

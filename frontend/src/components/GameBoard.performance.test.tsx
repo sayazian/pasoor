@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import GameBoard from './GameBoard';
 import type { Card, GameState, Rank, Suit } from '../types/game';
+import type { MatchState } from '../types/match';
 
 describe('GameBoard performance-oriented rendering', () => {
   afterEach(() => {
@@ -17,16 +18,13 @@ describe('GameBoard performance-oriented rendering', () => {
         game={game}
         selectedTableCards={[]}
         error={null}
-        onDeal={vi.fn()}
         onPlayCard={vi.fn()}
         onToggleTableCard={vi.fn()}
         onCapture={vi.fn()}
-        onNewGame={vi.fn()}
       />
     );
 
     expect(screen.getByText('Pasoor')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /new game/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /capture/i })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /of/i })).toHaveLength(46);
   });
@@ -37,11 +35,9 @@ describe('GameBoard performance-oriented rendering', () => {
         game={{ ...gameStateWithLargeTable(0), deck: [card('DECK-TWO', 'CLUBS', 'TWO')], deckCount: 1 }}
         selectedTableCards={[]}
         error={null}
-        onDeal={vi.fn()}
         onPlayCard={vi.fn()}
         onToggleTableCard={vi.fn()}
         onCapture={vi.fn()}
-        onNewGame={vi.fn()}
       />
     );
 
@@ -56,20 +52,25 @@ describe('GameBoard performance-oriented rendering', () => {
 
     render(
       <GameBoard
-        game={{ ...gameStateWithLargeTable(0), opponentHand: [], opponentHandCount: 4, currentTurn: 'OPPONENT' }}
+        game={{
+          ...gameStateWithLargeTable(0),
+          opponentHand: [],
+          opponentHandCount: 4,
+          currentTurn: 'OPPONENT',
+          pendingCapturePlayer: null,
+          pendingCaptureCard: null
+        }}
         selectedTableCards={[]}
         error={null}
-        onDeal={vi.fn()}
         onPlayCard={onPlayCard}
         onToggleTableCard={vi.fn()}
         onCapture={vi.fn()}
-        onNewGame={vi.fn()}
       />
     );
 
     const faceDownCards = screen.getAllByRole('button', { name: /face-down card/i });
 
-    expect(screen.getByText('Waiting for opponent')).toBeInTheDocument();
+    expect(screen.getByText('Waiting for Opponent')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /K of hearts/i })).not.toBeInTheDocument();
     expect(faceDownCards.filter((cardButton) => cardButton.hasAttribute('disabled')).length).toBeGreaterThanOrEqual(4);
     expect(onPlayCard).not.toHaveBeenCalled();
@@ -89,18 +90,16 @@ describe('GameBoard performance-oriented rendering', () => {
         }}
         selectedTableCards={[]}
         error={null}
-        onDeal={vi.fn()}
         onPlayCard={vi.fn()}
         onToggleTableCard={onToggleTableCard}
         onCapture={onCapture}
-        onNewGame={vi.fn()}
       />
     );
 
     const tableCard = screen.getByRole('button', { name: /8 of hearts/i });
 
     expect(screen.queryByRole('button', { name: /^capture$/i })).not.toBeInTheDocument();
-    expect(screen.getByText('Opponent choosing capture')).toBeInTheDocument();
+    expect(screen.getByText('Waiting for Opponent capture')).toBeInTheDocument();
     expect(tableCard).toHaveAttribute('aria-disabled', 'true');
     tableCard.click();
     expect(onToggleTableCard).not.toHaveBeenCalled();
@@ -113,11 +112,9 @@ describe('GameBoard performance-oriented rendering', () => {
         game={gameStateWithLargeTable(0)}
         selectedTableCards={[]}
         error={null}
-        onDeal={vi.fn()}
         onPlayCard={vi.fn()}
         onToggleTableCard={vi.fn()}
         onCapture={vi.fn()}
-        onNewGame={vi.fn()}
       />
     );
 
@@ -139,16 +136,34 @@ describe('GameBoard performance-oriented rendering', () => {
         }}
         selectedTableCards={[]}
         error={null}
-        onDeal={vi.fn()}
         onPlayCard={vi.fn()}
         onToggleTableCard={vi.fn()}
         onCapture={vi.fn()}
-        onNewGame={vi.fn()}
       />
     );
 
     expect(screen.getByRole('button', { name: /3 of diamonds/i })).toHaveClass('red-card');
     expect(screen.getByRole('button', { name: /8 of hearts/i })).toHaveClass('red-card');
+  });
+
+  it('uses player names from the match instead of generic opponent labels', () => {
+    render(
+      <GameBoard
+        game={gameStateWithLargeTable(0)}
+        match={matchState()}
+        selectedTableCards={[]}
+        error={null}
+        onPlayCard={vi.fn()}
+        onToggleTableCard={vi.fn()}
+        onCapture={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: /sahar turn/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Friend' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Opponent' })).not.toBeInTheDocument();
+    expect(screen.getByText('Friend taken')).toBeInTheDocument();
+    expect(screen.getByText('Sahar taken')).toBeInTheDocument();
   });
 });
 
@@ -199,4 +214,44 @@ function card(id: string, suit: Suit, rank: Rank): Card {
   };
 
   return { id, suit, rank, value: values[rank] };
+}
+
+function matchState(): MatchState {
+  return {
+    id: 'match-1',
+    status: 'ACTIVE',
+    playerOne: {
+      id: 'player-1',
+      name: 'Sahar',
+      email: 'sahar@example.com',
+      avatarUrl: null
+    },
+    playerTwo: {
+      id: 'player-2',
+      name: 'Friend',
+      email: 'friend@example.com',
+      avatarUrl: null
+    },
+    viewerSide: 'PLAYER_ONE',
+    playerOneTotalScore: 0,
+    playerTwoTotalScore: 0,
+    winnerSide: null,
+    winner: null,
+    exitedBy: null,
+    playerOneEndChoice: null,
+    playerTwoEndChoice: null,
+    rematchId: null,
+    currentRound: {
+      id: 'round-1',
+      roundNumber: 1,
+      status: 'ACTIVE',
+      gameState: gameStateWithLargeTable(0),
+      playerOneRoundScore: null,
+      playerTwoRoundScore: null,
+      playerOneAcknowledged: false,
+      playerTwoAcknowledged: false
+    },
+    lastCompletedRound: null,
+    completedRounds: []
+  };
 }

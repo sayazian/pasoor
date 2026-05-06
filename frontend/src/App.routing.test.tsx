@@ -15,15 +15,26 @@ const currentUser = {
 
 const newGameState: GameState = {
   deck: [],
-  deckCount: 52,
-  myHand: [],
+  deckCount: 40,
+  myHand: [
+    { id: 'CLUBS-TWO', suit: 'CLUBS', rank: 'TWO', value: 2 },
+    { id: 'CLUBS-THREE', suit: 'CLUBS', rank: 'THREE', value: 3 },
+    { id: 'CLUBS-FOUR', suit: 'CLUBS', rank: 'FOUR', value: 4 },
+    { id: 'CLUBS-FIVE', suit: 'CLUBS', rank: 'FIVE', value: 5 }
+  ],
   opponentHand: [],
-  tableCards: [],
+  opponentHandCount: 4,
+  tableCards: [
+    { id: 'HEARTS-TWO', suit: 'HEARTS', rank: 'TWO', value: 2 },
+    { id: 'HEARTS-THREE', suit: 'HEARTS', rank: 'THREE', value: 3 },
+    { id: 'HEARTS-FOUR', suit: 'HEARTS', rank: 'FOUR', value: 4 },
+    { id: 'HEARTS-FIVE', suit: 'HEARTS', rank: 'FIVE', value: 5 }
+  ],
   myCollectedPile: [],
   opponentCollectedPile: [],
   currentTurn: 'ME',
-  phase: 'NEW',
-  initialDealDone: false,
+  phase: 'PLAYING',
+  initialDealDone: true,
   mySurCount: 0,
   opponentSurCount: 0,
   pendingCapturePlayer: null,
@@ -42,14 +53,22 @@ const newMatchState: MatchState = {
   playerTwoTotalScore: 0,
   winnerSide: null,
   winner: null,
+  exitedBy: null,
+  playerOneEndChoice: null,
+  playerTwoEndChoice: null,
+  rematchId: null,
   currentRound: {
     id: '6b37b4ea-64dc-4965-b497-30db3b55f132',
     roundNumber: 1,
     status: 'ACTIVE',
     gameState: newGameState,
     playerOneRoundScore: null,
-    playerTwoRoundScore: null
-  }
+    playerTwoRoundScore: null,
+    playerOneAcknowledged: false,
+    playerTwoAcknowledged: false
+  },
+  lastCompletedRound: null,
+  completedRounds: []
 };
 
 const dealtMatchState: MatchState = {
@@ -216,7 +235,7 @@ describe('App routing', () => {
         }
       });
     });
-    expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
+    expect(await screen.findByText('Play a card')).toBeInTheDocument();
   });
 
   it('denies a live game invite from the popup', async () => {
@@ -297,11 +316,9 @@ describe('App routing', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
-    expect(screen.getByText('My turn')).toBeInTheDocument();
+    expect(await screen.findByText('Sahar turn')).toBeInTheDocument();
     expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Round');
-    expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Me0');
+    expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Sahar0');
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/matches', {
         method: 'POST',
@@ -312,22 +329,8 @@ describe('App routing', () => {
       });
     });
 
-    const deckButton = screen.getAllByRole('button', { name: /face-down card/i }).find((button) => !button.hasAttribute('disabled'));
+    const deckButton = screen.getAllByRole('button', { name: /face-down card/i }).find((button) => button.hasAttribute('disabled'));
     expect(deckButton).toBeDefined();
-    fireEvent.click(deckButton!);
-
-    await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith(
-        `http://localhost:8080/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/deal`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-    });
     expect(await screen.findByText('40')).toBeInTheDocument();
   });
 
@@ -359,7 +362,7 @@ describe('App routing', () => {
 
     const { container } = render(<App />);
 
-    expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
+    expect(await screen.findByText('Play a card')).toBeInTheDocument();
     expect(container.firstElementChild).toHaveClass(themeClass);
   });
 
@@ -380,8 +383,8 @@ describe('App routing', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('button', { name: /new game/i })).toBeInTheDocument();
-    expect(screen.getByText('My turn')).toBeInTheDocument();
+    expect(await screen.findByText('Play a card')).toBeInTheDocument();
+    expect(screen.getByText('Sahar turn')).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalledWith(
       'http://localhost:8080/api/matches',
       expect.objectContaining({ method: 'POST' })
@@ -411,6 +414,7 @@ describe('App routing', () => {
 
       return new Response('', { status: 404 });
     });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(<App />);
 

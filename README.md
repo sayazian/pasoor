@@ -24,13 +24,46 @@ Tests use H2 with the `test` Spring profile and run Flyway migrations against th
 
 ### Google OAuth
 
-Phase 2 uses Spring Security OAuth2 Client for Google sign-in. Configure these environment variables before running the backend with real Google login:
+Phase 2 uses Spring Security OAuth2 Client for Google sign-in.
+
+For local development, keep your real Google values in the ignored local profile file:
+
+```bash
+cp backend/src/main/resources/application-local.properties.example backend/src/main/resources/application-local.properties
+```
+
+Then edit `backend/src/main/resources/application-local.properties` with your real local Google client values. That file is ignored by Git, so changing it for local work will not create a GitHub change or trigger a Railway redeploy.
+
+Run the backend locally with the `local` profile:
+
+```bash
+cd backend
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+Railway production values should stay in Railway environment variables, not in committed files:
 
 ```text
 SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID=your-google-client-id
 SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET=your-google-client-secret
 FRONTEND_URL=http://localhost:5173
 ```
+
+When the deployed frontend and backend use different Railway hostnames, configure the backend service with production session cookie settings:
+
+```text
+SESSION_COOKIE_SAME_SITE=none
+SESSION_COOKIE_SECURE=true
+```
+
+The deployed frontend service runs `frontend/server.mjs`, which serves the built React app and proxies `/api`, `/oauth2`, `/login`, and `/logout` to the backend. Configure the frontend service with:
+
+```text
+VITE_API_BASE_URL=
+BACKEND_URL=http://backend.railway.internal:8080
+```
+
+With that setup, browser requests use the frontend origin and the session cookie belongs to `pasoor.up.railway.app`.
 
 Register this redirect URI in Google Cloud:
 
@@ -82,7 +115,7 @@ For match play and capture actions, a user can only act as their own match side,
 ```bash
 cd backend
 mvn test
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 ## Frontend

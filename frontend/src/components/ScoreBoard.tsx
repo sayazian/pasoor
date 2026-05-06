@@ -2,15 +2,17 @@ import type { Score } from '../types/game';
 
 interface ScoreBoardProps {
   score: Score;
+  myName?: string;
+  opponentName?: string;
 }
 
-export default function ScoreBoard({ score }: ScoreBoardProps) {
+export default function ScoreBoard({ score, myName = 'Me', opponentName = 'Opponent' }: ScoreBoardProps) {
   return (
     <section className="score-board">
       <div>
         <p className="panel-title">Final score</p>
         <h2>
-          Me {score.myScore} - {score.opponentScore} Opponent
+          {myName} {score.myScore} - {score.opponentScore} {opponentName}
         </h2>
       </div>
       <div className="score-grid">
