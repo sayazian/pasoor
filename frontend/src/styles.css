@@ -703,6 +703,10 @@ h2 {
   padding: 14px;
 }
 
+.hand-row {
+  overflow: hidden;
+}
+
 .left-column .pile-panel,
 .left-column .match-summary {
   overflow: hidden;

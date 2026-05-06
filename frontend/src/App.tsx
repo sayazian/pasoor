@@ -152,7 +152,6 @@ function DashboardPage({ currentUser, onLogout }: { currentUser: CurrentUser; on
         </div>
 
         <nav className="dashboard-actions" aria-label="Dashboard actions">
-          <Link to="/game">Create Game</Link>
           <Link to="/profile">Profile</Link>
           <Link to="/friends">Friends</Link>
           <button type="button" onClick={handleLogout}>

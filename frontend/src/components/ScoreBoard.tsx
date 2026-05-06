@@ -25,6 +25,18 @@ export default function ScoreBoard({ score, myName = 'Me', opponentName = 'Oppon
         <span>Sur points</span>
         <strong>{score.mySurPoints}</strong>
         <strong>{score.opponentSurPoints}</strong>
+        <span>Jacks</span>
+        <strong>{score.myJackCount}</strong>
+        <strong>{score.opponentJackCount}</strong>
+        <span>Aces</span>
+        <strong>{score.myAceCount}</strong>
+        <strong>{score.opponentAceCount}</strong>
+        <span>10 of diamonds</span>
+        <strong>{score.myTenOfDiamondsCount}</strong>
+        <strong>{score.opponentTenOfDiamondsCount}</strong>
+        <span>2 of clubs</span>
+        <strong>{score.myTwoOfClubsCount}</strong>
+        <strong>{score.opponentTwoOfClubsCount}</strong>
       </div>
     </section>
   );

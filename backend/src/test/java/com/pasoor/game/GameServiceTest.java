@@ -230,6 +230,41 @@ class GameServiceTest {
         assertThat(state.getScore().opponentScore()).isZero();
     }
 
+    @Test
+    void opposingSursCancelEachOtherAndScoreListsSpecialCards() {
+        GameService service = new GameService();
+        GameState state = service.newGame();
+        state.setDeck(new ArrayList<>());
+        state.setPhase(GamePhase.PLAYING);
+        state.setCurrentTurn(Player.ME);
+        state.setMySurCount(1);
+        state.setOpponentSurCount(1);
+        state.getMyCollectedPile().addAll(List.of(
+                card(Suit.SPADES, Rank.ACE),
+                card(Suit.CLUBS, Rank.JACK),
+                card(Suit.DIAMONDS, Rank.TEN),
+                card(Suit.CLUBS, Rank.TWO)
+        ));
+        state.getOpponentCollectedPile().addAll(List.of(
+                card(Suit.HEARTS, Rank.ACE),
+                card(Suit.DIAMONDS, Rank.JACK)
+        ));
+        state.getMyHand().add(card(Suit.SPADES, Rank.KING));
+
+        state = service.playCard(state, new PlayCardRequest(Player.ME, "SPADES-KING"));
+
+        assertThat(state.getPhase()).isEqualTo(GamePhase.FINISHED);
+        assertThat(state.getScore()).isNotNull();
+        assertThat(state.getScore().mySurPoints()).isZero();
+        assertThat(state.getScore().opponentSurPoints()).isZero();
+        assertThat(state.getScore().myAceCount()).isEqualTo(1);
+        assertThat(state.getScore().opponentAceCount()).isEqualTo(1);
+        assertThat(state.getScore().myJackCount()).isEqualTo(1);
+        assertThat(state.getScore().opponentJackCount()).isEqualTo(1);
+        assertThat(state.getScore().myTenOfDiamondsCount()).isEqualTo(1);
+        assertThat(state.getScore().myTwoOfClubsCount()).isEqualTo(1);
+    }
+
     private Card card(Suit suit, Rank rank) {
         return new Card(suit.name() + "-" + rank.name(), suit, rank, rank.getValue());
     }

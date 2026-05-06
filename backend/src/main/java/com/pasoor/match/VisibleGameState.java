@@ -69,7 +69,15 @@ public record VisibleGameState(
                 score.opponentSurPoints(),
                 score.mySurPoints(),
                 score.opponentCardPoints(),
-                score.myCardPoints()
+                score.myCardPoints(),
+                score.opponentAceCount(),
+                score.myAceCount(),
+                score.opponentJackCount(),
+                score.myJackCount(),
+                score.opponentTenOfDiamondsCount(),
+                score.myTenOfDiamondsCount(),
+                score.opponentTwoOfClubsCount(),
+                score.myTwoOfClubsCount()
         );
     }
 }

@@ -99,7 +99,7 @@ describe('GameBoard performance-oriented rendering', () => {
     const tableCard = screen.getByRole('button', { name: /8 of hearts/i });
 
     expect(screen.queryByRole('button', { name: /^capture$/i })).not.toBeInTheDocument();
-    expect(screen.getByText('Waiting for Opponent capture')).toBeInTheDocument();
+    expect(screen.getByText("Waiting for Opponent's capture")).toBeInTheDocument();
     expect(tableCard).toHaveAttribute('aria-disabled', 'true');
     tableCard.click();
     expect(onToggleTableCard).not.toHaveBeenCalled();
@@ -159,11 +159,11 @@ describe('GameBoard performance-oriented rendering', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { name: /sahar turn/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /sahar's turn/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Friend' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Opponent' })).not.toBeInTheDocument();
-    expect(screen.getByText('Friend taken')).toBeInTheDocument();
-    expect(screen.getByText('Sahar taken')).toBeInTheDocument();
+    expect(screen.getByText("Friend's taken cards")).toBeInTheDocument();
+    expect(screen.getByText("Sahar's taken cards")).toBeInTheDocument();
   });
 });
 

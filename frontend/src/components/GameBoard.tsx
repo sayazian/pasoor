@@ -33,6 +33,7 @@ export default function GameBoard({
   const score = match ? visibleMatchScore(match) : null;
   const playerNames = visiblePlayerNames(match);
   const tablePrompt = tableStatusPrompt(game, playerNames.OPPONENT);
+  const dealNumber = currentDealNumber(game);
 
   return (
     <section className="game">
@@ -41,15 +42,19 @@ export default function GameBoard({
           <div className="left-status">
             <div>
               <p className="eyebrow">Pasoor</p>
-              <h1>{game.phase === 'FINISHED' ? 'Game finished' : `${playerNames[game.currentTurn]} turn`}</h1>
+              <h1>{game.phase === 'FINISHED' ? 'Game finished' : `${possessive(playerNames[game.currentTurn])} turn`}</h1>
             </div>
           </div>
           <DeckPile count={game.deckCount} phase={game.phase} />
           {match && (
             <div className="match-summary" aria-label="Match score">
               <div>
-                <span>Round</span>
+                <span>Game</span>
                 <strong>{match.currentRound.roundNumber}</strong>
+              </div>
+              <div>
+                <span>Round</span>
+                <strong>{dealNumber}</strong>
               </div>
               <div>
                 <span>{playerNames.ME}</span>
@@ -100,8 +105,8 @@ export default function GameBoard({
         </div>
 
         <aside className="right-column">
-          <CollectedPile title={`${playerNames.OPPONENT} taken`} count={game.opponentCollectedPile.length} surCount={game.opponentSurCount} />
-          <CollectedPile title={`${playerNames.ME} taken`} count={game.myCollectedPile.length} surCount={game.mySurCount} />
+          <CollectedPile title={`${possessive(playerNames.OPPONENT)} taken cards`} count={game.opponentCollectedPile.length} surCount={game.opponentSurCount} />
+          <CollectedPile title={`${possessive(playerNames.ME)} taken cards`} count={game.myCollectedPile.length} surCount={game.mySurCount} />
         </aside>
       </div>
 
@@ -161,13 +166,25 @@ function tableStatusPrompt(game: GameState, opponentName: string) {
     return 'Waiting for your capture';
   }
   if (game.pendingCapturePlayer === 'OPPONENT') {
-    return `Waiting for ${opponentName} capture`;
+    return `Waiting for ${possessive(opponentName)} capture`;
   }
   if (game.currentTurn === 'ME') {
     return 'Play a card';
   }
 
   return `Waiting for ${opponentName}`;
+}
+
+function currentDealNumber(game: GameState) {
+  if (game.phase === 'NEW' && !game.initialDealDone) {
+    return 0;
+  }
+
+  return Math.max(1, Math.min(6, 1 + Math.floor((40 - game.deckCount) / 8)));
+}
+
+function possessive(name: string) {
+  return `${name}'s`;
 }
 
 function firstName(name: string | null | undefined, fallback: string) {

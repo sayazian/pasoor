@@ -339,8 +339,10 @@ public class GameService {
         int opponentClubCount = clubCount(gameState.getOpponentCollectedPile());
         int myMostClubsPoints = myClubCount > opponentClubCount ? 7 : 0;
         int opponentMostClubsPoints = opponentClubCount > myClubCount ? 7 : 0;
-        int mySurPoints = gameState.getMySurCount() * 5;
-        int opponentSurPoints = gameState.getOpponentSurCount() * 5;
+        int myNetSurCount = Math.max(0, gameState.getMySurCount() - gameState.getOpponentSurCount());
+        int opponentNetSurCount = Math.max(0, gameState.getOpponentSurCount() - gameState.getMySurCount());
+        int mySurPoints = myNetSurCount * 5;
+        int opponentSurPoints = opponentNetSurCount * 5;
         int myScore = myCardPoints + myMostClubsPoints + mySurPoints;
         int opponentScore = opponentCardPoints + opponentMostClubsPoints + opponentSurPoints;
 
@@ -352,7 +354,15 @@ public class GameService {
                 mySurPoints,
                 opponentSurPoints,
                 myCardPoints + myMostClubsPoints,
-                opponentCardPoints + opponentMostClubsPoints
+                opponentCardPoints + opponentMostClubsPoints,
+                rankCount(gameState.getMyCollectedPile(), Rank.ACE),
+                rankCount(gameState.getOpponentCollectedPile(), Rank.ACE),
+                rankCount(gameState.getMyCollectedPile(), Rank.JACK),
+                rankCount(gameState.getOpponentCollectedPile(), Rank.JACK),
+                specificCardCount(gameState.getMyCollectedPile(), Suit.DIAMONDS, Rank.TEN),
+                specificCardCount(gameState.getOpponentCollectedPile(), Suit.DIAMONDS, Rank.TEN),
+                specificCardCount(gameState.getMyCollectedPile(), Suit.CLUBS, Rank.TWO),
+                specificCardCount(gameState.getOpponentCollectedPile(), Suit.CLUBS, Rank.TWO)
         );
     }
 
@@ -377,6 +387,18 @@ public class GameService {
     private int clubCount(List<Card> cards) {
         return (int) cards.stream()
                 .filter(card -> card.suit() == Suit.CLUBS)
+                .count();
+    }
+
+    private int rankCount(List<Card> cards, Rank rank) {
+        return (int) cards.stream()
+                .filter(card -> card.rank() == rank)
+                .count();
+    }
+
+    private int specificCardCount(List<Card> cards, Suit suit, Rank rank) {
+        return (int) cards.stream()
+                .filter(card -> card.suit() == suit && card.rank() == rank)
                 .count();
     }
 

@@ -52,4 +52,12 @@ export interface Score {
   opponentSurPoints: number;
   myCardPoints: number;
   opponentCardPoints: number;
+  myAceCount: number;
+  opponentAceCount: number;
+  myJackCount: number;
+  opponentJackCount: number;
+  myTenOfDiamondsCount: number;
+  opponentTenOfDiamondsCount: number;
+  myTwoOfClubsCount: number;
+  opponentTwoOfClubsCount: number;
 }

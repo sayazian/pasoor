@@ -164,7 +164,15 @@ const completedRound = {
       mySurPoints: 0,
       opponentSurPoints: 0,
       myCardPoints: 12,
-      opponentCardPoints: 8
+      opponentCardPoints: 8,
+      myAceCount: 2,
+      opponentAceCount: 1,
+      myJackCount: 3,
+      opponentJackCount: 1,
+      myTenOfDiamondsCount: 1,
+      opponentTenOfDiamondsCount: 0,
+      myTwoOfClubsCount: 1,
+      opponentTwoOfClubsCount: 0
     }
   },
   playerOneRoundScore: 12,
@@ -345,6 +353,10 @@ describe('App routing', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: /game 1 score/i })).toBeInTheDocument();
+    expect(screen.getByText('Jacks')).toBeInTheDocument();
+    expect(screen.getByText('Aces')).toBeInTheDocument();
+    expect(screen.getByText('10 of diamonds')).toBeInTheDocument();
+    expect(screen.getByText('2 of clubs')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
     await waitFor(() => {
@@ -386,7 +398,7 @@ describe('App routing', () => {
     const { container } = render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Sahar' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /create game/i })).toHaveAttribute('href', '/game');
+    expect(screen.queryByRole('link', { name: /create game/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('link', { name: /friends/i })).toHaveAttribute('href', '/friends');
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
@@ -524,7 +536,7 @@ describe('App routing', () => {
 
     render(<App />);
 
-    expect(await screen.findByText('Sahar turn')).toBeInTheDocument();
+    expect(await screen.findByText("Sahar's turn")).toBeInTheDocument();
     expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Round');
     expect(screen.getByLabelText(/match score/i)).toHaveTextContent('Sahar0');
     await waitFor(() => {
@@ -592,7 +604,7 @@ describe('App routing', () => {
     render(<App />);
 
     expect(await screen.findByText('Play a card')).toBeInTheDocument();
-    expect(screen.getByText('Sahar turn')).toBeInTheDocument();
+    expect(screen.getByText("Sahar's turn")).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalledWith(
       'http://localhost:8080/api/matches',
       expect.objectContaining({ method: 'POST' })
@@ -638,7 +650,7 @@ describe('App routing', () => {
       });
     });
     expect(await screen.findByRole('heading', { name: 'Sahar' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /create game/i })).toHaveAttribute('href', '/game');
+    expect(screen.queryByRole('link', { name: /create game/i })).not.toBeInTheDocument();
   });
 
   it('shows a game load error instead of staying on loading text', async () => {

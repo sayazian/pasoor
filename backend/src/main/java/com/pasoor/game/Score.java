@@ -8,6 +8,14 @@ public record Score(
         int mySurPoints,
         int opponentSurPoints,
         int myCardPoints,
-        int opponentCardPoints
+        int opponentCardPoints,
+        int myAceCount,
+        int opponentAceCount,
+        int myJackCount,
+        int opponentJackCount,
+        int myTenOfDiamondsCount,
+        int opponentTenOfDiamondsCount,
+        int myTwoOfClubsCount,
+        int opponentTwoOfClubsCount
 ) {
 }

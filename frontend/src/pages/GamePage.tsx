@@ -28,6 +28,7 @@ export default function GamePage() {
   const [error, setError] = useState<string | null>(null);
   const [matchChoiceError, setMatchChoiceError] = useState<string | null>(null);
   const [dismissedRoundIds, setDismissedRoundIds] = useState<Set<string>>(() => new Set());
+  const [autoDealKey, setAutoDealKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,16 +82,19 @@ export default function GamePage() {
   }, [match?.rematchId, navigate]);
 
   useEffect(() => {
-    if (!shouldAutoDeal(match)) {
+    const dealKey = match ? `${match.currentRound.id}:${match.currentRound.gameState.deckCount}` : null;
+    if (!shouldAutoDeal(match) || autoDealKey === dealKey) {
       return;
     }
 
     let cancelled = false;
 
     async function dealHand() {
-      const dealtMatch = await run(() => dealMatchRound(match!.id, match!.currentRound.id));
-      if (!cancelled && dealtMatch) {
+      setAutoDealKey(dealKey);
+      const dealtMatch = await run(() => dealMatchRound(match!.id, match!.currentRound.id), { suppressAutoDealConflict: true });
+      if (!cancelled && dealtMatch && dealtMatch.currentRound.gameState.deckCount !== match!.currentRound.gameState.deckCount) {
         setSelectedTableCards([]);
+        setAutoDealKey(null);
       }
     }
 
@@ -108,17 +112,21 @@ export default function GamePage() {
     match?.currentRound.gameState.opponentHand.length,
     match?.currentRound.gameState.pendingCaptureCard?.id,
     match?.currentRound.gameState.phase,
-    match?.status
+    match?.status,
+    autoDealKey
   ]);
 
-  async function run(action: () => Promise<MatchState>) {
+  async function run(action: () => Promise<MatchState>, options: { suppressAutoDealConflict?: boolean } = {}) {
     try {
       setError(null);
       const nextMatch = await action();
       setMatch(nextMatch);
       return nextMatch;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Something went wrong.');
+      const message = caught instanceof Error ? caught.message : 'Something went wrong.';
+      if (!options.suppressAutoDealConflict || !isAutoDealConflict(message)) {
+        setError(message);
+      }
       return null;
     }
   }
@@ -174,7 +182,13 @@ export default function GamePage() {
       return;
     }
     setDismissedRoundIds((current) => new Set(current).add(round.id));
-    await run(() => acknowledgeRound(match.id, round.id));
+    try {
+      setError(null);
+      const nextMatch = await acknowledgeRound(match.id, round.id);
+      setMatch(nextMatch);
+    } catch {
+      // The popup is already dismissed locally; stale deployments can miss the ack endpoint.
+    }
   }
 
   async function handleMatchEndChoice(choice: MatchEndChoice) {
@@ -182,12 +196,18 @@ export default function GamePage() {
       return;
     }
     setMatchChoiceError(null);
-    const nextMatch = await run(() => chooseMatchEnd(match.id, choice));
-    if (!nextMatch) {
+    if (choice === 'DASHBOARD') {
+      try {
+        await chooseMatchEnd(match.id, choice);
+      } catch {
+        // Leaving the page is local navigation; backend persistence is best effort here.
+      }
+      navigate('/dashboard');
       return;
     }
-    if (choice === 'DASHBOARD') {
-      navigate('/dashboard');
+
+    const nextMatch = await run(() => chooseMatchEnd(match.id, choice));
+    if (!nextMatch) {
       return;
     }
     if (nextMatch.id !== match.id) {
@@ -233,9 +253,6 @@ export default function GamePage() {
           <h1>Waiting for friend</h1>
           <p className="muted-text">Your friend has been invited. The match starts when they accept.</p>
           {error && <p className="error-message">{error}</p>}
-          <button type="button" onClick={() => run(() => getMatch(match.id))}>
-            Check again
-          </button>
           <Link to="/friends">Friends</Link>
         </section>
       </main>
@@ -385,6 +402,12 @@ function shouldAutoDeal(match: MatchState | null) {
 
   return game.phase === 'NEW'
     || (game.phase === 'PLAYING' && game.deckCount > 0 && bothHandsEmpty && game.pendingCaptureCard === null);
+}
+
+function isAutoDealConflict(message: string) {
+  return message.includes('Deal only when both hands are empty')
+    || message.includes('Round not found')
+    || message.includes('Match is not active');
 }
 
 function viewerAcknowledged(match: MatchState, round: RoundState) {

@@ -498,7 +498,7 @@ class SecurityIntegrationTest {
         UUID roundId = UUID.fromString(createJson.get("currentRound").get("id").asText());
         GameRound round = roundRepository.findById(roundId).orElseThrow();
         GameState state = objectMapper.readValue(round.getGameStateJson(), GameState.class);
-        state.setScore(new com.pasoor.game.Score(7, 4, 4, 3, 0, 0, 3, 1));
+        state.setScore(new com.pasoor.game.Score(7, 4, 4, 3, 0, 0, 3, 1, 1, 0, 2, 1, 0, 0, 1, 0));
         round.setGameStateJson(objectMapper.writeValueAsString(state));
         round.setStatus(com.pasoor.match.RoundStatus.FINISHED);
         round.setFinishedAt(Instant.now());
