@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { GameState } from './types/game';
@@ -149,13 +149,24 @@ const nextHandMatchState: MatchState = {
   }
 };
 
-const completedRound = {
+const completedRound: MatchState['currentRound'] = {
   id: 'finished-round-1',
   roundNumber: 1,
   status: 'FINISHED' as const,
   gameState: {
     ...newGameState,
     phase: 'FINISHED' as const,
+    myCollectedPile: [
+      { id: 'MY-JACK-SPADES', suit: 'SPADES', rank: 'JACK', value: 11 },
+      { id: 'MY-JACK-HEARTS', suit: 'HEARTS', rank: 'JACK', value: 11 },
+      { id: 'MY-ACE-HEARTS', suit: 'HEARTS', rank: 'ACE', value: 1 },
+      { id: 'MY-TEN-DIAMONDS', suit: 'DIAMONDS', rank: 'TEN', value: 10 },
+      { id: 'MY-TWO-CLUBS', suit: 'CLUBS', rank: 'TWO', value: 2 }
+    ],
+    opponentCollectedPile: [
+      { id: 'OPPONENT-JACK-CLUBS', suit: 'CLUBS', rank: 'JACK', value: 11 },
+      { id: 'OPPONENT-ACE-SPADES', suit: 'SPADES', rank: 'ACE', value: 1 }
+    ],
     score: {
       myScore: 12,
       opponentScore: 8,
@@ -164,15 +175,7 @@ const completedRound = {
       mySurPoints: 0,
       opponentSurPoints: 0,
       myCardPoints: 12,
-      opponentCardPoints: 8,
-      myAceCount: 2,
-      opponentAceCount: 1,
-      myJackCount: 3,
-      opponentJackCount: 1,
-      myTenOfDiamondsCount: 1,
-      opponentTenOfDiamondsCount: 0,
-      myTwoOfClubsCount: 1,
-      opponentTwoOfClubsCount: 0
+      opponentCardPoints: 8
     }
   },
   playerOneRoundScore: 12,
@@ -353,10 +356,14 @@ describe('App routing', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: /game 1 score/i })).toBeInTheDocument();
-    expect(screen.getByText('Jacks')).toBeInTheDocument();
-    expect(screen.getByText('Aces')).toBeInTheDocument();
-    expect(screen.getByText('10 of diamonds')).toBeInTheDocument();
-    expect(screen.getByText('2 of clubs')).toBeInTheDocument();
+    const breakdown = within(screen.getByLabelText('Score breakdown'));
+    expect(breakdown.getByText('Sahar')).toBeInTheDocument();
+    expect(breakdown.getByText('Opponent')).toBeInTheDocument();
+    expect(breakdown.getByText('Jacks')).toBeInTheDocument();
+    expect(breakdown.getByText('Aces')).toBeInTheDocument();
+    expect(breakdown.getByText('10 of diamonds')).toBeInTheDocument();
+    expect(breakdown.getByText('2 of clubs')).toBeInTheDocument();
+    expect(breakdown.getByText('2')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
     await waitFor(() => {

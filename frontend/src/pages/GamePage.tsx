@@ -319,7 +319,13 @@ export default function GamePage() {
             </button>
           }
         >
-          <ScoreBoard score={roundForPopup.gameState.score} myName={playerNames.ME} opponentName={playerNames.OPPONENT} />
+          <ScoreBoard
+            score={roundForPopup.gameState.score}
+            myName={playerNames.ME}
+            opponentName={playerNames.OPPONENT}
+            myCollectedPile={roundForPopup.gameState.myCollectedPile}
+            opponentCollectedPile={roundForPopup.gameState.opponentCollectedPile}
+          />
         </StatusDialog>
       )}
       {match.status === 'FINISHED' && (

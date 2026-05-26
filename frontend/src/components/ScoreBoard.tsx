@@ -1,12 +1,29 @@
-import type { Score } from '../types/game';
+import type { Card, Rank, Score, Suit } from '../types/game';
 
 interface ScoreBoardProps {
   score: Score;
   myName?: string;
   opponentName?: string;
+  myCollectedPile?: Card[];
+  opponentCollectedPile?: Card[];
 }
 
-export default function ScoreBoard({ score, myName = 'Me', opponentName = 'Opponent' }: ScoreBoardProps) {
+export default function ScoreBoard({
+  score,
+  myName = 'Me',
+  opponentName = 'Opponent',
+  myCollectedPile = [],
+  opponentCollectedPile = []
+}: ScoreBoardProps) {
+  const myJacks = score.myJackCount ?? rankCount(myCollectedPile, 'JACK');
+  const opponentJacks = score.opponentJackCount ?? rankCount(opponentCollectedPile, 'JACK');
+  const myAces = score.myAceCount ?? rankCount(myCollectedPile, 'ACE');
+  const opponentAces = score.opponentAceCount ?? rankCount(opponentCollectedPile, 'ACE');
+  const myTenOfDiamonds = score.myTenOfDiamondsCount ?? specificCardCount(myCollectedPile, 'DIAMONDS', 'TEN');
+  const opponentTenOfDiamonds = score.opponentTenOfDiamondsCount ?? specificCardCount(opponentCollectedPile, 'DIAMONDS', 'TEN');
+  const myTwoOfClubs = score.myTwoOfClubsCount ?? specificCardCount(myCollectedPile, 'CLUBS', 'TWO');
+  const opponentTwoOfClubs = score.opponentTwoOfClubsCount ?? specificCardCount(opponentCollectedPile, 'CLUBS', 'TWO');
+
   return (
     <section className="score-board">
       <div>
@@ -15,7 +32,10 @@ export default function ScoreBoard({ score, myName = 'Me', opponentName = 'Oppon
           {myName} {score.myScore} - {score.opponentScore} {opponentName}
         </h2>
       </div>
-      <div className="score-grid">
+      <div className="score-grid" aria-label="Score breakdown">
+        <span />
+        <strong>{myName}</strong>
+        <strong>{opponentName}</strong>
         <span>Clubs</span>
         <strong>{score.myClubCount}</strong>
         <strong>{score.opponentClubCount}</strong>
@@ -26,18 +46,26 @@ export default function ScoreBoard({ score, myName = 'Me', opponentName = 'Oppon
         <strong>{score.mySurPoints}</strong>
         <strong>{score.opponentSurPoints}</strong>
         <span>Jacks</span>
-        <strong>{score.myJackCount}</strong>
-        <strong>{score.opponentJackCount}</strong>
+        <strong>{myJacks}</strong>
+        <strong>{opponentJacks}</strong>
         <span>Aces</span>
-        <strong>{score.myAceCount}</strong>
-        <strong>{score.opponentAceCount}</strong>
+        <strong>{myAces}</strong>
+        <strong>{opponentAces}</strong>
         <span>10 of diamonds</span>
-        <strong>{score.myTenOfDiamondsCount}</strong>
-        <strong>{score.opponentTenOfDiamondsCount}</strong>
+        <strong>{myTenOfDiamonds}</strong>
+        <strong>{opponentTenOfDiamonds}</strong>
         <span>2 of clubs</span>
-        <strong>{score.myTwoOfClubsCount}</strong>
-        <strong>{score.opponentTwoOfClubsCount}</strong>
+        <strong>{myTwoOfClubs}</strong>
+        <strong>{opponentTwoOfClubs}</strong>
       </div>
     </section>
   );
+}
+
+function rankCount(cards: Card[], rank: Rank) {
+  return cards.filter((card) => card.rank === rank).length;
+}
+
+function specificCardCount(cards: Card[], suit: Suit, rank: Rank) {
+  return cards.filter((card) => card.suit === suit && card.rank === rank).length;
 }
