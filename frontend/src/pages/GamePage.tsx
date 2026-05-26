@@ -17,7 +17,7 @@ import type { Card, GameState, Player } from '../types/game';
 import type { CaptureAnimation } from '../components/GameBoard';
 import type { MatchEndChoice, MatchPlayer, MatchState, RoundState } from '../types/match';
 
-export default function GamePage() {
+export default function GamePage({ captureAnimationEnabled = true }: { captureAnimationEnabled?: boolean }) {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -127,7 +127,7 @@ export default function GamePage() {
 
     const currentRound = match.currentRound;
     const previousRound = previousRoundRef.current;
-    if (previousRound?.roundId === currentRound.id) {
+    if (captureAnimationEnabled && previousRound?.roundId === currentRound.id) {
       const animation = capturedCardsAnimation(previousRound.gameState, currentRound.gameState);
       if (animation) {
         setCaptureAnimation(animation);
@@ -138,7 +138,13 @@ export default function GamePage() {
       roundId: currentRound.id,
       gameState: currentRound.gameState
     };
-  }, [match]);
+  }, [captureAnimationEnabled, match]);
+
+  useEffect(() => {
+    if (!captureAnimationEnabled) {
+      setCaptureAnimation(null);
+    }
+  }, [captureAnimationEnabled]);
 
   useEffect(() => {
     if (!captureAnimation) {

@@ -39,6 +39,7 @@ class UserServiceTest {
         assertThat(user.getEmail()).isEqualTo("sahar@example.com");
         assertThat(user.getAvatarUrl()).isEqualTo("https://example.com/avatar.png");
         assertThat(user.getPreferredTheme()).isEqualTo(PreferredTheme.CLASSIC_GREEN_FELT);
+        assertThat(user.isCaptureAnimationEnabled()).isTrue();
     }
 
     @Test
@@ -63,7 +64,7 @@ class UserServiceTest {
     void syncOAuthUserKeepsEditedDisplayName() {
         UserService userService = new UserService(userRepository);
         User user = userService.syncOAuthUser(new OAuthUserProfile("google-789", "Google Name", "player@example.com", null));
-        userService.updateProfile(user, new ProfileUpdateRequest("Table Name", PreferredTheme.PERSIAN_TILE));
+        userService.updateProfile(user, new ProfileUpdateRequest("Table Name", PreferredTheme.PERSIAN_TILE, false));
 
         User synced = userService.syncOAuthUser(new OAuthUserProfile(
                 "google-789",
@@ -76,6 +77,7 @@ class UserServiceTest {
         assertThat(synced.getEmail()).isEqualTo("new-player@example.com");
         assertThat(synced.getAvatarUrl()).isEqualTo("https://example.com/avatar.png");
         assertThat(synced.getPreferredTheme()).isEqualTo(PreferredTheme.PERSIAN_TILE);
+        assertThat(synced.isCaptureAnimationEnabled()).isFalse();
     }
 
     @Test
@@ -85,10 +87,12 @@ class UserServiceTest {
 
         User updated = userService.updateProfile(user, new ProfileUpdateRequest(
                 "  Card Player  ",
-                PreferredTheme.DARK_CARD_ROOM
+                PreferredTheme.DARK_CARD_ROOM,
+                false
         ));
 
         assertThat(updated.getName()).isEqualTo("Card Player");
         assertThat(updated.getPreferredTheme()).isEqualTo(PreferredTheme.DARK_CARD_ROOM);
+        assertThat(updated.isCaptureAnimationEnabled()).isFalse();
     }
 }

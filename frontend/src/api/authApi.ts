@@ -31,7 +31,11 @@ export function requireCurrentUser(): Promise<CurrentUser> {
   return request<CurrentUser>('/api/me');
 }
 
-export function updateProfile(profile: { name: string; preferredTheme: PreferredTheme }): Promise<CurrentUser> {
+export function updateProfile(profile: {
+  name: string;
+  preferredTheme: PreferredTheme;
+  captureAnimationEnabled: boolean;
+}): Promise<CurrentUser> {
   return request<CurrentUser>('/api/me/profile', {
     method: 'PATCH',
     body: JSON.stringify(profile)

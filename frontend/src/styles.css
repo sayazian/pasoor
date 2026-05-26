@@ -343,6 +343,36 @@ a {
   width: 28px;
 }
 
+.setting-toggle {
+  align-items: center;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-card-ink);
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto 1fr;
+  padding: 14px;
+}
+
+.setting-toggle input {
+  height: 20px;
+  width: 20px;
+}
+
+.setting-toggle span,
+.setting-toggle strong,
+.setting-toggle small {
+  display: block;
+}
+
+.setting-toggle small {
+  color: var(--color-muted);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
 .theme-preview-classic-green-felt {
   --preview-primary: #173f35;
   --preview-accent: #d9a21b;

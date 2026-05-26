@@ -68,6 +68,14 @@ export default function App() {
             }
           />
           <Route
+            path="/settings"
+            element={
+              <ProtectedRoute authStatus={authStatus}>
+                <SettingsPage currentUser={currentUser!} onProfileUpdated={setCurrentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/friends"
             element={
               <ProtectedRoute authStatus={authStatus}>
@@ -79,7 +87,7 @@ export default function App() {
             path="/game/:matchId?"
             element={
               <ProtectedRoute authStatus={authStatus}>
-                <GamePage />
+                <GamePage captureAnimationEnabled={currentUser?.captureAnimationEnabled ?? true} />
               </ProtectedRoute>
             }
           />
@@ -153,6 +161,7 @@ function DashboardPage({ currentUser, onLogout }: { currentUser: CurrentUser; on
 
         <nav className="dashboard-actions" aria-label="Dashboard actions">
           <Link to="/profile">Profile</Link>
+          <Link to="/settings">Settings</Link>
           <Link to="/friends">Friends</Link>
           <button type="button" onClick={handleLogout}>
             Log out
@@ -263,7 +272,6 @@ function ProfilePage({
 }) {
   const navigate = useNavigate();
   const [name, setName] = useState(currentUser.name);
-  const [preferredTheme, setPreferredTheme] = useState<PreferredTheme>(currentUser.preferredTheme);
   const [status, setStatus] = useState<'idle' | 'saving'>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -273,7 +281,11 @@ function ProfilePage({
     setError(null);
 
     try {
-      const updatedUser = await updateProfile({ name, preferredTheme });
+      const updatedUser = await updateProfile({
+        name,
+        preferredTheme: currentUser.preferredTheme,
+        captureAnimationEnabled: currentUser.captureAnimationEnabled
+      });
       onProfileUpdated(updatedUser);
       navigate('/dashboard');
     } catch (caught) {
@@ -300,6 +312,59 @@ function ProfilePage({
           <input value={currentUser.email} readOnly />
         </label>
 
+        {error && <p className="error-message">{error}</p>}
+
+        <div className="profile-actions">
+          <Link to="/dashboard">Cancel</Link>
+          <button type="submit" disabled={status === 'saving'}>
+            {status === 'saving' ? 'Saving...' : 'Save profile'}
+          </button>
+        </div>
+      </form>
+    </main>
+  );
+}
+
+function SettingsPage({
+  currentUser,
+  onProfileUpdated
+}: {
+  currentUser: CurrentUser;
+  onProfileUpdated: (user: CurrentUser) => void;
+}) {
+  const navigate = useNavigate();
+  const [preferredTheme, setPreferredTheme] = useState<PreferredTheme>(currentUser.preferredTheme);
+  const [captureAnimationEnabled, setCaptureAnimationEnabled] = useState(currentUser.captureAnimationEnabled);
+  const [status, setStatus] = useState<'idle' | 'saving'>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus('saving');
+    setError(null);
+
+    try {
+      const updatedUser = await updateProfile({
+        name: currentUser.name,
+        preferredTheme,
+        captureAnimationEnabled
+      });
+      onProfileUpdated(updatedUser);
+      navigate('/dashboard');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Settings could not be saved.');
+      setStatus('idle');
+    }
+  }
+
+  return (
+    <main className="app-shell profile-shell">
+      <form className="profile-panel" onSubmit={handleSubmit}>
+        <div>
+          <p className="eyebrow">Settings</p>
+          <h1>Settings</h1>
+        </div>
+
         <fieldset className="theme-options">
           <legend>Game appearance</legend>
           {themes.map((theme) => (
@@ -317,12 +382,24 @@ function ProfilePage({
           ))}
         </fieldset>
 
+        <label className="setting-toggle">
+          <input
+            type="checkbox"
+            checked={captureAnimationEnabled}
+            onChange={(event) => setCaptureAnimationEnabled(event.target.checked)}
+          />
+          <span>
+            <strong>Capture animation</strong>
+            <small>Show taken cards before they move to the taken pile.</small>
+          </span>
+        </label>
+
         {error && <p className="error-message">{error}</p>}
 
         <div className="profile-actions">
           <Link to="/dashboard">Cancel</Link>
           <button type="submit" disabled={status === 'saving'}>
-            {status === 'saving' ? 'Saving...' : 'Save profile'}
+            {status === 'saving' ? 'Saving...' : 'Save settings'}
           </button>
         </div>
       </form>

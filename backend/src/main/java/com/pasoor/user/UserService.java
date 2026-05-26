@@ -42,9 +42,13 @@ public class UserService {
         if (request.preferredTheme() == null) {
             throw new ResponseStatusException(BAD_REQUEST, "Preferred theme is required.");
         }
+        if (request.captureAnimationEnabled() == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "Capture animation preference is required.");
+        }
 
         user.setName(request.name().trim());
         user.setPreferredTheme(request.preferredTheme());
+        user.setCaptureAnimationEnabled(request.captureAnimationEnabled());
         return userRepository.save(user);
     }
 

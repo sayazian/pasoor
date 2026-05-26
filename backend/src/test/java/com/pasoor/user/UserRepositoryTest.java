@@ -30,6 +30,7 @@ class UserRepositoryTest {
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getPreferredTheme()).isEqualTo(PreferredTheme.CLASSIC_GREEN_FELT);
+        assertThat(saved.isCaptureAnimationEnabled()).isTrue();
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
     }
@@ -48,10 +49,12 @@ class UserRepositoryTest {
 
         user.setName("New Name");
         user.setPreferredTheme(PreferredTheme.DARK_CARD_ROOM);
+        user.setCaptureAnimationEnabled(false);
         User saved = userRepository.saveAndFlush(user);
 
         assertThat(saved.getName()).isEqualTo("New Name");
         assertThat(saved.getPreferredTheme()).isEqualTo(PreferredTheme.DARK_CARD_ROOM);
+        assertThat(saved.isCaptureAnimationEnabled()).isFalse();
         assertThat(saved.getUpdatedAt()).isAfterOrEqualTo(saved.getCreatedAt());
     }
 }

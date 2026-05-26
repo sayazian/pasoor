@@ -34,6 +34,9 @@ public class User {
     @Column(name = "preferred_theme", nullable = false)
     private PreferredTheme preferredTheme = PreferredTheme.CLASSIC_GREEN_FELT;
 
+    @Column(name = "capture_animation_enabled", nullable = false)
+    private boolean captureAnimationEnabled = true;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -104,6 +107,14 @@ public class User {
 
     public void setPreferredTheme(PreferredTheme preferredTheme) {
         this.preferredTheme = preferredTheme;
+    }
+
+    public boolean isCaptureAnimationEnabled() {
+        return captureAnimationEnabled;
+    }
+
+    public void setCaptureAnimationEnabled(boolean captureAnimationEnabled) {
+        this.captureAnimationEnabled = captureAnimationEnabled;
     }
 
     public Instant getCreatedAt() {

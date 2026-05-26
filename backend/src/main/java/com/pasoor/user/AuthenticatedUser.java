@@ -7,7 +7,8 @@ public record AuthenticatedUser(
         String name,
         String email,
         String avatarUrl,
-        PreferredTheme preferredTheme
+        PreferredTheme preferredTheme,
+        boolean captureAnimationEnabled
 ) {
     public static AuthenticatedUser from(User user) {
         return new AuthenticatedUser(
@@ -15,8 +16,8 @@ public record AuthenticatedUser(
                 user.getName(),
                 user.getEmail(),
                 user.getAvatarUrl(),
-                user.getPreferredTheme()
+                user.getPreferredTheme(),
+                user.isCaptureAnimationEnabled()
         );
     }
 }
-

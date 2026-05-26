@@ -10,7 +10,8 @@ const currentUser = {
   name: 'Sahar',
   email: 'sahar@example.com',
   avatarUrl: null,
-  preferredTheme: 'CLASSIC_GREEN_FELT'
+  preferredTheme: 'CLASSIC_GREEN_FELT',
+  captureAnimationEnabled: true
 };
 
 const newGameState: GameState = {
@@ -449,6 +450,40 @@ describe('App routing', () => {
     });
   });
 
+  it('does not show capture animation when the user disables it in settings', async () => {
+    window.history.pushState({}, '', `/game/${newMatchState.id}`);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json({
+          ...currentUser,
+          captureAnimationEnabled: false
+        });
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`) && !init?.method) {
+        return Response.json(pendingJackMatchState);
+      }
+      if (
+        url.endsWith(`/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/capture`) &&
+        init?.method === 'POST'
+      ) {
+        return Response.json(newMatchState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^capture$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Play a card')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('status', { name: /captured cards/i })).not.toBeInTheDocument();
+  });
+
   it('shows final game details and match totals after a match ends', async () => {
     window.history.pushState({}, '', `/game/${newMatchState.id}`);
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -499,6 +534,7 @@ describe('App routing', () => {
     expect(await screen.findByRole('heading', { name: 'Sahar' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /create game/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings');
     expect(screen.getByRole('link', { name: /friends/i })).toHaveAttribute('href', '/friends');
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
     expect(container.firstElementChild).toHaveClass('theme-classic-green-felt');
@@ -785,8 +821,7 @@ describe('App routing', () => {
       if (url.endsWith('/api/me/profile') && init?.method === 'PATCH') {
         return Response.json({
           ...currentUser,
-          name: 'Card Player',
-          preferredTheme: 'DARK_CARD_ROOM'
+          name: 'Card Player'
         });
       }
 
@@ -799,7 +834,6 @@ describe('App routing', () => {
     expect(screen.getByLabelText(/email/i)).toHaveValue('sahar@example.com');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Card Player' } });
-    fireEvent.click(screen.getByLabelText(/dark card room/i));
     fireEvent.click(screen.getByRole('button', { name: /save profile/i }));
 
     await waitFor(() => {
@@ -807,7 +841,8 @@ describe('App routing', () => {
         method: 'PATCH',
         body: JSON.stringify({
           name: 'Card Player',
-          preferredTheme: 'DARK_CARD_ROOM'
+          preferredTheme: 'CLASSIC_GREEN_FELT',
+          captureAnimationEnabled: true
         }),
         credentials: 'include',
         headers: {
@@ -816,6 +851,49 @@ describe('App routing', () => {
       });
     });
     expect(await screen.findByRole('heading', { name: 'Card Player' })).toBeInTheDocument();
+  });
+
+  it('loads the settings route directly and saves game preferences', async () => {
+    window.history.pushState({}, '', '/settings');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith('/api/me/profile') && init?.method === 'PATCH') {
+        return Response.json({
+          ...currentUser,
+          preferredTheme: 'DARK_CARD_ROOM',
+          captureAnimationEnabled: false
+        });
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /settings/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/dark card room/i));
+    fireEvent.click(screen.getByLabelText(/capture animation/i));
+    fireEvent.click(screen.getByRole('button', { name: /save settings/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8080/api/me/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: 'Sahar',
+          preferredTheme: 'DARK_CARD_ROOM',
+          captureAnimationEnabled: false
+        }),
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+    expect(await screen.findByRole('heading', { name: 'Sahar' })).toBeInTheDocument();
   });
 
   it('loads the friends route directly and shows friend lists', async () => {

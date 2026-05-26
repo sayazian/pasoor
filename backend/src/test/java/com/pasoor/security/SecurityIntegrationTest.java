@@ -85,7 +85,7 @@ class SecurityIntegrationTest {
         mockMvc.perform(patch("/api/me/profile")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Sahar","preferredTheme":"MODERN_LIGHT_TABLE"}
+                                {"name":"Sahar","preferredTheme":"MODERN_LIGHT_TABLE","captureAnimationEnabled":true}
                                 """))
                 .andExpect(status().isUnauthorized());
     }
@@ -115,7 +115,8 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.name").value("Sahar"))
                 .andExpect(jsonPath("$.email").value("sahar@example.com"))
                 .andExpect(jsonPath("$.avatarUrl").value("https://example.com/avatar.png"))
-                .andExpect(jsonPath("$.preferredTheme").value("CLASSIC_GREEN_FELT"));
+                .andExpect(jsonPath("$.preferredTheme").value("CLASSIC_GREEN_FELT"))
+                .andExpect(jsonPath("$.captureAnimationEnabled").value(true));
 
         assertThat(userRepository.findByGoogleSubject("google-123")).isPresent();
     }
@@ -564,17 +565,19 @@ class SecurityIntegrationTest {
                         }))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Card Player","preferredTheme":"DARK_CARD_ROOM"}
+                                {"name":"Card Player","preferredTheme":"DARK_CARD_ROOM","captureAnimationEnabled":false}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Card Player"))
                 .andExpect(jsonPath("$.email").value("sahar@example.com"))
-                .andExpect(jsonPath("$.preferredTheme").value("DARK_CARD_ROOM"));
+                .andExpect(jsonPath("$.preferredTheme").value("DARK_CARD_ROOM"))
+                .andExpect(jsonPath("$.captureAnimationEnabled").value(false));
 
         assertThat(userRepository.findByGoogleSubject("google-789"))
                 .hasValueSatisfying(user -> {
                     assertThat(user.getName()).isEqualTo("Card Player");
                     assertThat(user.getEmail()).isEqualTo("sahar@example.com");
+                    assertThat(user.isCaptureAnimationEnabled()).isFalse();
                 });
     }
 
@@ -588,7 +591,7 @@ class SecurityIntegrationTest {
                         }))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"   ","preferredTheme":"CLASSIC_GREEN_FELT"}
+                                {"name":"   ","preferredTheme":"CLASSIC_GREEN_FELT","captureAnimationEnabled":true}
                                 """))
                 .andExpect(status().isBadRequest());
     }
