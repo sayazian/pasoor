@@ -317,9 +317,17 @@ public class GameService {
 
     private void incrementSur(Player player) {
         if (player == Player.ME) {
-            gameState.setMySurCount(gameState.getMySurCount() + 1);
+            if (gameState.getOpponentSurCount() > 0) {
+                gameState.setOpponentSurCount(gameState.getOpponentSurCount() - 1);
+            } else {
+                gameState.setMySurCount(gameState.getMySurCount() + 1);
+            }
         } else {
-            gameState.setOpponentSurCount(gameState.getOpponentSurCount() + 1);
+            if (gameState.getMySurCount() > 0) {
+                gameState.setMySurCount(gameState.getMySurCount() - 1);
+            } else {
+                gameState.setOpponentSurCount(gameState.getOpponentSurCount() + 1);
+            }
         }
     }
 

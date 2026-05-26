@@ -517,6 +517,7 @@ a {
   min-height: 640px;
   overflow: hidden;
   padding: 14px;
+  position: relative;
 }
 
 .eyebrow,
@@ -904,9 +905,16 @@ h2 {
 .match-round-list {
   display: grid;
   gap: 8px;
+  max-height: min(58dvh, 560px);
+  overflow: auto;
 }
 
-.match-round-list div {
+.match-round-list .score-board {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.match-total-score {
   align-items: center;
   background: var(--color-card);
   border: 1px solid var(--color-border);
@@ -917,7 +925,7 @@ h2 {
   padding: 10px 12px;
 }
 
-.match-round-list span {
+.match-total-score span {
   color: var(--color-muted);
   font-weight: 800;
 }
@@ -937,6 +945,94 @@ h2 {
 
 .score-grid strong {
   color: var(--color-primary);
+}
+
+.capture-animation {
+  animation: capture-drop 1.8s ease-in-out forwards;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.26);
+  display: grid;
+  gap: 12px;
+  left: 50%;
+  max-width: min(620px, calc(100% - 40px));
+  padding: 18px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.82);
+  width: max-content;
+  z-index: 12;
+}
+
+.capture-animation-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.capture-animation .card {
+  height: 128px;
+}
+
+.capture-animation p {
+  color: var(--color-card-ink);
+  font-weight: 900;
+  margin: 0;
+  text-align: center;
+}
+
+.confetti {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  z-index: 11;
+}
+
+.confetti span {
+  animation: confetti-fall 2.6s ease-out infinite;
+  animation-delay: calc(var(--confetti-index) * -0.08s);
+  background: hsl(calc(var(--confetti-index) * 47deg), 78%, 58%);
+  border-radius: 2px;
+  height: 12px;
+  left: calc(var(--confetti-index) * 4.17%);
+  position: absolute;
+  top: -18px;
+  transform: rotate(calc(var(--confetti-index) * 19deg));
+  width: 8px;
+}
+
+@keyframes capture-drop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.72);
+  }
+  24%,
+  66% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(32%, 28%) scale(0.38);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    translate: 0 -18px;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: calc((var(--confetti-index) - 12) * 3px) calc(100dvh + 30px);
+  }
 }
 
 .error-message {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   acknowledgeRound,
@@ -13,7 +13,8 @@ import {
 } from '../api/matchesApi';
 import GameBoard from '../components/GameBoard';
 import ScoreBoard from '../components/ScoreBoard';
-import type { Player } from '../types/game';
+import type { Card, GameState, Player } from '../types/game';
+import type { CaptureAnimation } from '../components/GameBoard';
 import type { MatchEndChoice, MatchPlayer, MatchState, RoundState } from '../types/match';
 
 export default function GamePage() {
@@ -29,6 +30,8 @@ export default function GamePage() {
   const [matchChoiceError, setMatchChoiceError] = useState<string | null>(null);
   const [dismissedRoundIds, setDismissedRoundIds] = useState<Set<string>>(() => new Set());
   const [autoDealKey, setAutoDealKey] = useState<string | null>(null);
+  const [captureAnimation, setCaptureAnimation] = useState<CaptureAnimation | null>(null);
+  const previousRoundRef = useRef<{ roundId: string; gameState: GameState } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +117,55 @@ export default function GamePage() {
     match?.currentRound.gameState.phase,
     match?.status,
     autoDealKey
+  ]);
+
+  useEffect(() => {
+    if (!match) {
+      previousRoundRef.current = null;
+      return;
+    }
+
+    const currentRound = match.currentRound;
+    const previousRound = previousRoundRef.current;
+    if (previousRound?.roundId === currentRound.id) {
+      const animation = capturedCardsAnimation(previousRound.gameState, currentRound.gameState);
+      if (animation) {
+        setCaptureAnimation(animation);
+      }
+    }
+
+    previousRoundRef.current = {
+      roundId: currentRound.id,
+      gameState: currentRound.gameState
+    };
+  }, [match]);
+
+  useEffect(() => {
+    if (!captureAnimation) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setCaptureAnimation(null), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [captureAnimation]);
+
+  useEffect(() => {
+    const game = match?.currentRound.gameState;
+    if (game?.pendingCapturePlayer !== 'ME' || game.pendingCaptureCard?.rank !== 'JACK') {
+      return;
+    }
+
+    const jackCaptureIds = game.tableCards
+      .filter((card) => card.id !== game.pendingCaptureCard?.id && isJackCapturable(card))
+      .map((card) => card.id);
+
+    setSelectedTableCards((current) => arraysEqual(current, jackCaptureIds) ? current : jackCaptureIds);
+  }, [
+    match?.currentRound.id,
+    match?.currentRound.gameState.pendingCapturePlayer,
+    match?.currentRound.gameState.pendingCaptureCard?.id,
+    match?.currentRound.gameState.pendingCaptureCard?.rank,
+    match?.currentRound.gameState.tableCards
   ]);
 
   async function run(action: () => Promise<MatchState>, options: { suppressAutoDealConflict?: boolean } = {}) {
@@ -295,7 +347,9 @@ export default function GamePage() {
   }
 
   const playerNames = visiblePlayerNames(match);
-  const roundForPopup = match.status === 'ACTIVE' ? unacknowledgedRound(match, dismissedRoundIds) : null;
+  const roundForPopup = match.status === 'ACTIVE' || match.status === 'FINISHED'
+    ? unacknowledgedRound(match, dismissedRoundIds)
+    : null;
   const matchEndConflict = matchEndConflictMessage(match);
 
   return (
@@ -309,6 +363,7 @@ export default function GamePage() {
         onToggleTableCard={handleToggleTableCard}
         onCapture={handleCapture}
         onExitMatch={handleExitMatch}
+        captureAnimation={captureAnimation}
       />
       {roundForPopup?.gameState.score && (
         <StatusDialog
@@ -328,10 +383,11 @@ export default function GamePage() {
           />
         </StatusDialog>
       )}
-      {match.status === 'FINISHED' && (
+      {match.status === 'FINISHED' && !roundForPopup && (
         <StatusDialog
           title="Match ended"
           message={matchWinnerMessage(match)}
+          showConfetti={match.winnerSide === match.viewerSide}
           actions={
             <>
               <button type="button" onClick={() => handleMatchEndChoice('PLAY_AGAIN')}>
@@ -345,12 +401,21 @@ export default function GamePage() {
         >
           {(matchChoiceError || matchEndConflict) && <p className="error-message">{matchChoiceError ?? matchEndConflict}</p>}
           <div className="match-round-list">
-            {(match.completedRounds ?? []).map((round) => (
-              <div key={round.id}>
-                <span>Game {round.roundNumber}</span>
-                <strong>{visibleRoundScore(match, round)}</strong>
-              </div>
+            {(match.completedRounds ?? []).filter((round) => round.gameState.score).map((round) => (
+              <ScoreBoard
+                key={round.id}
+                score={round.gameState.score!}
+                myName={playerNames.ME}
+                opponentName={playerNames.OPPONENT}
+                myCollectedPile={round.gameState.myCollectedPile}
+                opponentCollectedPile={round.gameState.opponentCollectedPile}
+                title={`Game ${round.roundNumber}`}
+              />
             ))}
+            <div className="match-total-score">
+              <span>Match total</span>
+              <strong>{playerNames.ME} {visibleMatchTotals(match).myTotal} - {visibleMatchTotals(match).opponentTotal} {playerNames.OPPONENT}</strong>
+            </div>
           </div>
         </StatusDialog>
       )}
@@ -362,15 +427,18 @@ function StatusDialog({
   title,
   message,
   actions,
-  children
+  children,
+  showConfetti = false
 }: {
   title: string;
   message?: string;
   actions: ReactNode;
   children?: ReactNode;
+  showConfetti?: boolean;
 }) {
   return (
     <div className="invite-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="status-dialog-title">
+      {showConfetti && <Confetti />}
       <section className="invite-modal status-dialog">
         <p className="eyebrow">Pasoor</p>
         <h1 id="status-dialog-title">{title}</h1>
@@ -378,6 +446,16 @@ function StatusDialog({
         {children}
         <div className="profile-actions">{actions}</div>
       </section>
+    </div>
+  );
+}
+
+function Confetti() {
+  return (
+    <div className="confetti" aria-hidden="true">
+      {Array.from({ length: 24 }, (_, index) => (
+        <span key={index} style={{ '--confetti-index': index } as CSSProperties} />
+      ))}
     </div>
   );
 }
@@ -478,4 +556,58 @@ function visibleRoundScore(match: MatchState, round: RoundState) {
   const names = visiblePlayerNames(match);
 
   return `${names.ME} ${myScore ?? 0} - ${opponentScore ?? 0} ${names.OPPONENT}`;
+}
+
+function visibleMatchTotals(match: MatchState) {
+  if (match.viewerSide === 'PLAYER_TWO') {
+    return {
+      myTotal: match.playerTwoTotalScore,
+      opponentTotal: match.playerOneTotalScore
+    };
+  }
+
+  return {
+    myTotal: match.playerOneTotalScore,
+    opponentTotal: match.playerTwoTotalScore
+  };
+}
+
+function capturedCardsAnimation(previous: GameState, next: GameState): CaptureAnimation | null {
+  if (!previous.pendingCaptureCard || previous.pendingCapturePlayer === null || next.pendingCaptureCard !== null) {
+    return null;
+  }
+
+  const previousTableIds = new Set(previous.tableCards.map((card) => card.id));
+  const nextTableIds = new Set(next.tableCards.map((card) => card.id));
+  const removedCards = previous.tableCards.filter((card) => previousTableIds.has(card.id) && !nextTableIds.has(card.id));
+  const capturedCards = uniqueCards([previous.pendingCaptureCard, ...removedCards]);
+
+  if (capturedCards.length <= 1) {
+    return null;
+  }
+
+  return {
+    id: `${previous.pendingCaptureCard.id}:${next.myCollectedPile.length}:${next.opponentCollectedPile.length}`,
+    cards: capturedCards,
+    player: previous.pendingCapturePlayer
+  };
+}
+
+function uniqueCards(cards: Card[]) {
+  const seen = new Set<string>();
+  return cards.filter((card) => {
+    if (seen.has(card.id)) {
+      return false;
+    }
+    seen.add(card.id);
+    return true;
+  });
+}
+
+function isJackCapturable(card: Card) {
+  return card.rank === 'JACK' || (card.rank !== 'QUEEN' && card.rank !== 'KING');
+}
+
+function arraysEqual(left: string[], right: string[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }

@@ -265,6 +265,25 @@ class GameServiceTest {
         assertThat(state.getScore().myTwoOfClubsCount()).isEqualTo(1);
     }
 
+    @Test
+    void newSurCancelsOpposingVisibleSurCountInsteadOfAddingBothSides() {
+        GameService service = new GameService();
+        GameState state = service.newGame();
+        state.setDeck(new ArrayList<>(List.of(card(Suit.DIAMONDS, Rank.THREE))));
+        state.setPhase(GamePhase.PLAYING);
+        state.setInitialDealDone(true);
+        state.setCurrentTurn(Player.OPPONENT);
+        state.setMySurCount(1);
+        state.getOpponentHand().add(card(Suit.SPADES, Rank.FIVE));
+        state.getTableCards().add(card(Suit.HEARTS, Rank.SIX));
+
+        state = service.playCard(state, new PlayCardRequest(Player.OPPONENT, "SPADES-FIVE"));
+        state = service.captureCards(state, new CaptureCardsRequest(Player.OPPONENT, List.of("HEARTS-SIX")));
+
+        assertThat(state.getMySurCount()).isZero();
+        assertThat(state.getOpponentSurCount()).isZero();
+    }
+
     private Card card(Suit suit, Rank rank) {
         return new Card(suit.name() + "-" + rank.name(), suit, rank, rank.getValue());
     }

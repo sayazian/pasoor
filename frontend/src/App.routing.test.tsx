@@ -195,6 +195,37 @@ const matchWithUnacknowledgedRound: MatchState = {
   completedRounds: [completedRound]
 };
 
+const matchFinishedState: MatchState = {
+  ...newMatchState,
+  status: 'FINISHED',
+  playerOneTotalScore: 72,
+  playerTwoTotalScore: 64,
+  winnerSide: 'PLAYER_ONE',
+  winner: currentUser,
+  currentRound: completedRound,
+  lastCompletedRound: null,
+  completedRounds: [completedRound]
+};
+
+const pendingJackMatchState: MatchState = {
+  ...newMatchState,
+  currentRound: {
+    ...newMatchState.currentRound,
+    gameState: {
+      ...newGameState,
+      myHand: [],
+      tableCards: [
+        { id: 'PENDING-JACK', suit: 'SPADES', rank: 'JACK', value: 11 },
+        { id: 'TABLE-ACE', suit: 'HEARTS', rank: 'ACE', value: 1 },
+        { id: 'TABLE-TEN', suit: 'DIAMONDS', rank: 'TEN', value: 10 },
+        { id: 'TABLE-KING', suit: 'CLUBS', rank: 'KING', value: 13 }
+      ],
+      pendingCapturePlayer: 'ME',
+      pendingCaptureCard: { id: 'PENDING-JACK', suit: 'SPADES', rank: 'JACK', value: 11 }
+    }
+  }
+};
+
 const waitingMatchState: MatchState = {
   ...newMatchState,
   status: 'WAITING'
@@ -379,6 +410,67 @@ describe('App routing', () => {
       );
     });
     expect(screen.queryByRole('heading', { name: /game 1 score/i })).not.toBeInTheDocument();
+  });
+
+  it('auto-selects every card a pending Jack must capture', async () => {
+    window.history.pushState({}, '', `/game/${newMatchState.id}`);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`) && !init?.method) {
+        return Response.json(pendingJackMatchState);
+      }
+      if (
+        url.endsWith(`/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/capture`) &&
+        init?.method === 'POST'
+      ) {
+        return Response.json(newMatchState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText('2 selected')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^capture$/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `http://localhost:8080/api/matches/${newMatchState.id}/rounds/${newMatchState.currentRound.id}/capture`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ player: 'ME', capturedTableCardIds: ['TABLE-ACE', 'TABLE-TEN'] })
+        })
+      );
+    });
+  });
+
+  it('shows final game details and match totals after a match ends', async () => {
+    window.history.pushState({}, '', `/game/${newMatchState.id}`);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = input.toString();
+
+      if (url.endsWith('/api/me')) {
+        return Response.json(currentUser);
+      }
+      if (url.endsWith(`/api/matches/${newMatchState.id}`)) {
+        return Response.json(matchFinishedState);
+      }
+
+      return new Response('', { status: 404 });
+    });
+
+    const { container } = render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /match ended/i })).toBeInTheDocument();
+    expect(screen.getByText('Game 1')).toBeInTheDocument();
+    expect(screen.getByText('Match total')).toBeInTheDocument();
+    expect(screen.getByText(/Sahar 72 - 64 Opponent/i)).toBeInTheDocument();
+    expect(container.querySelector('.confetti')).not.toBeNull();
   });
 
   afterEach(() => {

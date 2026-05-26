@@ -165,6 +165,27 @@ describe('GameBoard performance-oriented rendering', () => {
     expect(screen.getByText("Friend's taken cards")).toBeInTheDocument();
     expect(screen.getByText("Sahar's taken cards")).toBeInTheDocument();
   });
+
+  it('shows captured cards in an animation overlay', () => {
+    render(
+      <GameBoard
+        game={gameStateWithLargeTable(0)}
+        selectedTableCards={[]}
+        error={null}
+        onPlayCard={vi.fn()}
+        onToggleTableCard={vi.fn()}
+        onCapture={vi.fn()}
+        captureAnimation={{
+          id: 'capture-1',
+          player: 'ME',
+          cards: [card('PENDING-FIVE', 'CLUBS', 'FIVE'), card('TABLE-SIX', 'HEARTS', 'SIX')]
+        }}
+      />
+    );
+
+    expect(screen.getByRole('status', { name: /captured cards/i })).toBeInTheDocument();
+    expect(screen.getByText('You took these cards')).toBeInTheDocument();
+  });
 });
 
 function gameStateWithLargeTable(tableSize: number): GameState {

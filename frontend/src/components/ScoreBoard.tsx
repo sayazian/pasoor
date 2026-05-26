@@ -6,6 +6,7 @@ interface ScoreBoardProps {
   opponentName?: string;
   myCollectedPile?: Card[];
   opponentCollectedPile?: Card[];
+  title?: string;
 }
 
 export default function ScoreBoard({
@@ -13,7 +14,8 @@ export default function ScoreBoard({
   myName = 'Me',
   opponentName = 'Opponent',
   myCollectedPile = [],
-  opponentCollectedPile = []
+  opponentCollectedPile = [],
+  title = 'Final score'
 }: ScoreBoardProps) {
   const myJacks = score.myJackCount ?? rankCount(myCollectedPile, 'JACK');
   const opponentJacks = score.opponentJackCount ?? rankCount(opponentCollectedPile, 'JACK');
@@ -27,7 +29,7 @@ export default function ScoreBoard({
   return (
     <section className="score-board">
       <div>
-        <p className="panel-title">Final score</p>
+        <p className="panel-title">{title}</p>
         <h2>
           {myName} {score.myScore} - {score.opponentScore} {opponentName}
         </h2>

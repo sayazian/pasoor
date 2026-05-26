@@ -1,9 +1,17 @@
 import type { GameState, Player } from '../types/game';
+import type { Card as CardType } from '../types/game';
 import type { MatchState } from '../types/match';
+import Card from './Card';
 import CollectedPile from './CollectedPile';
 import DeckPile from './DeckPile';
 import HandRow from './HandRow';
 import TableRow from './TableRow';
+
+export interface CaptureAnimation {
+  id: string;
+  cards: CardType[];
+  player: Player;
+}
 
 interface GameBoardProps {
   game: GameState;
@@ -14,6 +22,7 @@ interface GameBoardProps {
   onToggleTableCard: (cardId: string) => void;
   onCapture: () => void;
   onExitMatch?: () => void;
+  captureAnimation?: CaptureAnimation | null;
 }
 
 export default function GameBoard({
@@ -24,7 +33,8 @@ export default function GameBoard({
   onPlayCard,
   onToggleTableCard,
   onCapture,
-  onExitMatch
+  onExitMatch,
+  captureAnimation
 }: GameBoardProps) {
   const isPendingCapture = game.pendingCaptureCard !== null;
   const matchFinished = match?.status === 'FINISHED';
@@ -109,6 +119,17 @@ export default function GameBoard({
           <CollectedPile title={`${possessive(playerNames.ME)} taken cards`} count={game.myCollectedPile.length} surCount={game.mySurCount} />
         </aside>
       </div>
+
+      {captureAnimation && (
+        <div className="capture-animation" role="status" aria-label="Captured cards">
+          <div className="capture-animation-cards">
+            {captureAnimation.cards.map((card) => (
+              <Card key={card.id} card={card} disabled />
+            ))}
+          </div>
+          <p>{captureAnimation.player === 'ME' ? 'You took these cards' : `${playerNames.OPPONENT} took these cards`}</p>
+        </div>
+      )}
 
       {error && <p className="error-message">{error}</p>}
     </section>
